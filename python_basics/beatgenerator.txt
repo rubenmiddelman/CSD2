@@ -1,0 +1,15 @@
+##set the starting BPM
+BPM 100
+
+##what kit do you want to play when you start?
+classicBeatGenKit  1
+electroKit  0
+rockKit  0
+jazzKit  0
+
+
+##set your standard swing level
+swingLevel 0
+
+##set if you want the sound to start playing on startup(1 for on 0 for off)
+startupSound 0
