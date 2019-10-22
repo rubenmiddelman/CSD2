@@ -41,7 +41,7 @@ BPM = int(splitRawBPM.pop())
 kickChanceList = []
 snareChanceList = []
 hiHatChanceList = []
-rockKickChanceList = [100, 0, 50, 0, 100, 0 ,25, 0, 100, 0, 25, 0, 100, 0 ,25, 0]
+rockKickChanceList = [100, 0,50, 0, 100, 0 ,25, 0, 100, 0, 50, 0, 100, 0 ,0, 0]
 rockSnareChanceList = [50, 0, 50, 5, 75, 0 ,50, 0, 50, 0, 25, 5, 50, 0 ,25, 5]
 rockHiHatChanceList = [70, 25, 70, 25, 75, 25, 75, 25, 75, 25, 75, 25, 75, 25 ,75, 25]
 jazzKickList = [75, 0, 38, 0, 38, 0, 5, 0, 40, 12, 0, 0, 0, 0, 0, 24]
@@ -95,7 +95,6 @@ splitRawStartup = rawStartup.split(" ")
 startup = int(splitRawStartup.pop())
 
 if startup == 0:
-    print("Hi")
     electroKit = 0
     classicBeatGenKit = 0
     rockKit = 0
@@ -480,9 +479,10 @@ def AddSwing():
             bigSwingList.append(smallSwingList3)
     copyOfTimestamps = deepcopy(bigSwingList)
 
-
+##does the same but workes on startup
 def MakingTheGird():
     global timestamps
+    global copyOfTimestamps
     cnum = 0
     cnum2 = 0
     cnum3 = 0
@@ -519,6 +519,7 @@ def MakingTheGird():
             frame.grid(row=3, column = cnum3)
             cnum3 = cnum3 + 1
 
+##makes a 3 by however long grid to show which notes are played
 def MakingTheGirdDurring():
     global timestamps
     cnum = 0
@@ -556,6 +557,8 @@ def MakingTheGirdDurring():
             frame = Button(root, bg="black")
             frame.grid(row=3, column = cnum3)
             cnum3 = cnum3 + 1
+
+
 ##main looping function that takes from the main timestamps list and then takes
 ##out the first 3 mini list and checks if those have a 1 or 0 to see if note needs
 ##to be played if note needs to be played waits till the timestamp is correct
@@ -576,10 +579,10 @@ def PlayLoopOnce():
         kickToF = kickStamp.pop()
         snareToF = snareStamp.pop()
         hiHatToF = hiHatStamp.pop()
-        while timestamps:
+        while True:
             currentTime = time.time()
-            if kickToF == 1:
-                if(currentTime - startTime >= kickStamp[0]):
+            if(currentTime - startTime >= kickStamp[0]):
+                if kickToF == 1:
                     if classicBeatGenKit == 1:
                         kickObj.play()
                     elif electroKit == 1:
@@ -588,8 +591,8 @@ def PlayLoopOnce():
                         rockkickObj.play()
                     elif jazzKit == 1:
                         jazzkickObj.play()
-            if snareToF == 1:
-                if(currentTime - startTime >= snareStamp[0]):
+            if(currentTime - startTime >= snareStamp[0]):
+                if snareToF == 1:
                     if classicBeatGenKit == 1:
                         snareObj.play()
                     elif electroKit == 1:
@@ -598,8 +601,8 @@ def PlayLoopOnce():
                         rocksnareObj.play()
                     elif jazzKit == 1:
                         jazzsnareObj.play()
-            if hiHatToF == 1:
-                if(currentTime - startTime >= hiHatStamp[0]):
+            if(currentTime - startTime >= hiHatStamp[0]):
+                if hiHatToF == 1:
                     if classicBeatGenKit == 1:
                         hiHatObj.play()
                     elif electroKit == 1:
@@ -618,14 +621,18 @@ def PlayLoopOnce():
                     else:
                         break
                 else:
-                    time.sleep(0.001)
+                    if timestamps:
+                        kickStamp = timestamps.pop(0)
+                        snareStamp = timestamps.pop(0)
+                        hiHatStamp = timestamps.pop(0)
+                        kickToF = kickStamp.pop()
+                        snareToF = snareStamp.pop()
+                        hiHatToF = hiHatStamp.pop()
+                    else:
+                        break
             else:
-                kickStamp = timestamps.pop(0)
-                snareStamp = timestamps.pop(0)
-                hiHatStamp = timestamps.pop(0)
-                kickToF = kickStamp.pop()
-                snareToF = snareStamp.pop()
-                hiHatToF = hiHatStamp.pop()
+                time.sleep(0.001)
+        time.sleep(sixteenthNoteDuration)
         timestamps = deepcopy(copyOfTimestamps)
 
 
@@ -637,12 +644,6 @@ threadInput = threading.Thread(target = InputChecker)
 ##calls functions to create a list in 4/4 so that a loop directly starts playing
 ##then opens the looping thread
 print("commands: new, timesignature n/n, BPM n, swing n, for more help type help")
-if startup == "False":
-    print("Hi")
-    electroKit = 0
-    classicBeatGenKit = 0
-    rockKit = 0
-    jazzKit = 0
 TimeSignatureMath("4/4")
 ChanceToTimeStamp(kickChanceList, snareChanceList, hiHatChanceList)
 MakingTheGird()
