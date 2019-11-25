@@ -1,6 +1,7 @@
 import simpleaudio as sa
 import time
 import random
+
 global BPM
 
 randomList = [0.125, 0.25, 0.50, 1]
@@ -13,7 +14,6 @@ wave_obj = sa.WaveObject.from_wave_file("belle.wav")
 ##makes a function that plays a sample
 def PlaySample():
     play_obj = wave_obj.play()
-    play_obj.wait_done()
 
 ##checks if textfile will be used or if user wants to write down his options
 ##and asks questions about BPM and such things

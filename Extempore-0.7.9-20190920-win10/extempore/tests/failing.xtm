@@ -1,0 +1,31 @@
+;;; failing.xtm -- a place for failing tests
+
+;; Author: Ben Swift
+;; Keywords: extempore
+;; Required dylibs:
+
+;;; Commentary:
+
+;; failing tests go here first. once the bug is fixed, the test should
+;; be moved into the appropriate test file.
+
+;;; Code:
+
+;; why does it think th type of nx is double?
+(xtmtest
+ '(bind-func dotimes_type_quirk_1
+  (lambda (nx)
+    (doloop (x nx)
+      x)
+    nx))
+ (integer? (dotimes_type_quirk_1 2)) #t)
+
+(xtmtest
+ '(bind-func dotimes_type_quirk_2
+    (lambda (nx:i64)
+      (doloop (x nx)
+        x)
+      nx))
+ (integer? (dotimes_type_quirk_2 2)) #t)
+
+(xtmtest-print-results)

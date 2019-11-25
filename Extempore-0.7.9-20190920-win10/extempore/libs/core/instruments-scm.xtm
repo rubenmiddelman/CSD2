@@ -1,0 +1,575 @@
+;;; instruments-scm.xtm -- scheme code for libs/core/instruments.xtm library
+
+;; Author: Andrew Sorensen, Ben Swift
+;; Keywords: extempore
+;; Required dylibs:
+
+;;; Commentary:
+
+;;
+
+;;; Code:
+
+(sys:load "libs/core/pc_ivl.xtm")
+
+(define PARAM_OSC1_AMP 0)
+(define PARAM_OSC1_FRQ 1)
+(define PARAM_OSC1_PW 2)
+(define PARAM_OSC2_AMP 3)
+(define PARAM_OSC2_FRQ 4)
+(define PARAM_OSC2_PW 5)
+(define PARAM_NOISE_AMP 6)
+(define PARAM_FILTER_FRQ 7)
+;; modulation destinations (fx)
+(define PARAM_PAN_WIDTH 8)
+(define PARAM_PAN_POS 9) 
+(define PARAM_DELAY_TIME 10)
+(define PARAM_DELAY_FB 11) ;; feedback
+(define PARAM_REVERB_SIZE 12)
+(define PARAM_REVERB_PREDELAY 13)
+(define PARAM_REVERB_ABSORB 14)
+(define PARAM_REVERB_MIX 15)
+
+(define PARAM_SINE 0)
+(define PARAM_SAW 1)
+(define PARAM_PULSE 2)
+(define PARAM_TRI 3)
+(define PARAM_WT 4)
+(define PARAM_AD 5)
+(define PARAM_CONST 6)
+(define PARAM_RANDOM 7)
+(define PARAM_WHITE 0)
+(define PARAM_PINK 1)
+
+(define PARAM_LPF 0)
+(define PARAM_BPF 1)
+(define PARAM_HPF 2)
+(define PARAM_Notch 3)
+(define PARAM_Peak 4)
+(define PARAM_APF 5)
+
+(define PARAM_LFO1 0)
+(define PARAM_LFO2 1)
+(define PARAM_LFO3 2)
+(define PARAM_LFO4 3)
+
+;; modulation destinations (note)
+(define PARAM_OSC1_AMP 0)
+(define PARAM_OSC1_FRQ 1)
+(define PARAM_OSC1_PW 2)
+(define PARAM_OSC1_PAN 3)
+(define PARAM_OSC2_AMP 4)
+(define PARAM_OSC2_FRQ 5)
+(define PARAM_OSC2_PW 6)
+(define PARAM_OSC2_PAN 7)
+(define PARAM_OSC3_AMP 8)
+(define PARAM_OSC3_FRQ 9)
+(define PARAM_OSC3_PW 10)
+(define PARAM_OSC3_PAN 11)
+(define PARAM_OSC4_AMP 12)
+(define PARAM_OSC4_FRQ 13)
+(define PARAM_OSC4_PW 14)
+(define PARAM_OSC4_PAN 15)
+(define PARAM_NOISE_AMP 16)
+(define PARAM_FILTER_FRQ 17)
+(define PARAM_FILTER_RES 18)
+
+;; modulation destinations (fx)
+(define PARAM_PAN_WIDTH 19)
+(define PARAM_PAN_POS 20) 
+(define PARAM_DELAY_TIME_LEFT 21)
+(define PARAM_DELAY_TIME_RIGHT 22)
+(define PARAM_DELAY_FB 23) ;; feedback
+(define PARAM_REVERB_SIZE 24)
+(define PARAM_REVERB_PREDELAY 25)
+(define PARAM_REVERB_ABSORB 26)
+(define PARAM_REVERB_MIX 27)
+
+(define set_lfo1
+  (lambda (inst . args)
+    (if (= (length args) 2)
+        (apply set_lfo inst 0 args)
+        (if (= (length args) 4)
+            (apply set_lfo_ad inst 0 args)
+            #f))))
+
+(define set_lfo1_type
+  (lambda (inst val)
+    (set_lfo_type inst 0 val)))
+
+(define set_lfo2
+  (lambda (inst . args)
+    (if (= (length args) 2)
+        (apply set_lfo inst 1 args)
+        (if (= (length args) 4)
+            (apply set_lfo_ad inst 1 args)
+            #f))))
+
+(define set_lfo2_type
+  (lambda (inst val)
+    (set_lfo_type inst 1 val)))
+
+(define set_lfo3
+  (lambda (inst . args)
+    (if (= (length args) 2)
+        (apply set_lfo inst 2 args)
+        (if (= (length args) 4)
+            (apply set_lfo_ad inst 2 args)
+            #f))))
+
+(define set_lfo3_type
+  (lambda (inst val)
+    (set_lfo_type inst 2 val)))
+
+(define set_lfo4
+  (lambda (inst . args)
+    (if (= (length args) 2)
+        (apply set_lfo inst 3 args)
+        (if (= (length args) 4)
+            (apply set_lfo_ad inst 3 args)
+            #f))))
+
+(define set_lfo4_type
+  (lambda (inst val)
+    (set_lfo_type inst 3 val)))
+
+
+
+
+(define-macro (make-instrument defname synthname . args)
+  (let* ((note (append (string->sexpr (string-append "(" (symbol->string synthname) "_note)")) args))
+         (fx (string->sexpr (string-append "(" (symbol->string synthname) "_fx)"))))
+    `(begin
+       (eval (bind-val ,defname INSTRUMENT (make_instrument ,note ,fx))
+             (interaction-environment))
+       (eval (define ,defname (call-as-xtlang-leaky ,defname))
+             (interaction-environment))
+       (print-with-colors 'default 'default #f (print 'New 'instrument 'bound 'as ""))
+       (print-with-colors 'green 'default #t (print ',defname ""))
+       (print-with-colors 'default 'default #f (println 'in 'both 'scheme 'and 'xtlang))
+       #t)))
+
+(define play-note
+  (lambda (time inst pitch vol dur . args)
+    (let* ((nargs (length args))
+           (duration dur)
+           (dargs (sys:make-cptr (* (if (audio_64bit) 8 4) nargs))) ;; doubles
+           (native (if (closure? inst)
+                       (llvm:get-native-closure (symbol->string (apply inst (list 'xtlang))))
+                       (if (symbol? inst)
+                           (llvm:get-native-closure (eval (string->symbol (string-append (symbol->string inst) "_xtlang_name"))))
+                           (if (cptr? inst)
+                               inst
+                               #f)))))
+      (if (= (audio_64bit) 1)
+          (dotimes (i nargs) (cptr:set-double dargs (* i 8) (eval (list-ref args i))))
+          (dotimes (i nargs) (cptr:set-float dargs (* i 4) (eval (list-ref args i)))))
+      (if (cptr? native)
+          (if (list? pitch)
+              (for-each (lambda (p) 
+                          (xtm_play_note (real->integer time)
+                          native
+                          (midi2frq (* 1.0 p))
+                          (/ (exp (/ vol 26.222)) 127.0)
+                          (real->integer duration)
+                          nargs
+                          dargs))
+                        pitch)
+            (xtm_play_note (real->integer time)
+                        native
+                        (midi2frq (* 1.0 pitch))
+                        (/ (exp (/ vol 26.222)) 127.0)
+                        (real->integer duration)
+                        nargs
+                        dargs))
+          (print-error 'No 'inst 'named (symbol->string inst))))))
+
+
+(define start-note
+  (lambda (time inst pitch vol . args)
+    (apply play-note time inst pitch vol 10000000.0 args)))
+
+(define stop-note
+  (lambda (time note)
+    (callback time 'xtm_stop_note note)))
+
+(define close-note-gate
+  (lambda (time note)
+    (callback time 'xtm_gate_off note)))
+
+;; the play macro
+(macro (play args)
+       (if (symbol? (cadr args))
+           `(play-note (*metro* beat) ,(cadr args) ,(caddr args) ,(cadddr args) (*metro* 'dur ,(car (cddddr args)))
+                       ,@(cdr (cddddr args)))
+           `(play-note (*metro* (+ beat ,(cadr args))) ,(caddr args) ,(cadddr args) ,(car (cddddr args))
+                       (*metro* 'dur ,(car (cdr (cddddr args))))
+                       ,@(cddr (cddddr args)))))
+
+
+(define-macro (playob o b . args)
+  `(if (= ,o (+ 1 (modulo beat ,b)))
+       (play ,@args)
+       #f))
+
+(define-macro (playobs l b . args)
+  `(if (member (+ 1 (modulo beat ,b)) ,l)
+       (play ,@args)
+       #f))
+
+
+(bind-macro
+  "xtlang play macro
+
+for use with native beat shceduler"
+  (play . args)
+  (let ((ns 0)
+        (instargs '()))
+    (if (symbol? (car args))
+        (begin (set! ns (- (length args) 5))
+               (set! instargs (map (lambda (a)
+                                     (list 'convert (list '* '1.0:double a)))
+                                   (cdr (cddddr args))))
+               `(let ((dat:SAMPLE* ,(if (= ns 0) 'null `(alloc ,ns))))
+                  ,(if (> ns 0) `(pfill! dat ,@instargs) 1)
+                  (xtm_play 0.0
+                            ,(car args)
+                            ,(cadr args)
+                            (convert ,(caddr args))
+                            (convert ,(cadddr args))
+                            (convert (* 1.0:double (* 1/1 ,(car (cddddr args)))))
+                            ,ns dat)))
+        (begin (set! ns (- (length args) 6))
+               (set! instargs (map (lambda (a)
+                                     (list 'convert (list '* '1.0:double a)))
+                                   (cddr (cddddr args))))
+               `(let ((dat:SAMPLE* ,(if (= ns 0) 'null `(alloc ,ns))))
+                  ,(if (> ns 0) `(pfill! dat ,@instargs) 1)
+                  (xtm_play ,(car args)
+                            ,(cadr args)
+                            ,(caddr args)
+                            (convert ,(cadddr args))
+                            (convert ,(car (cddddr args)))
+                            (convert (* 1.0:double (* 1/1 ,(cadr (cddddr args)))))
+                            ,ns dat))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; additional compositional tools
+;;
+
+(define scale (pc:scale 0 'aeolian))
+(define root 0)
+(define key 0)
+(define chord '(0 3 7))
+
+(define *scale* (pc:scale 0 'aeolian))
+(define *root* 0)
+(define *key* 0)
+(define *chord* '(0 3 7))
+
+;; cosr with pc
+(define-macro (qcosr pc . args)
+  `(pc:quantize (cosr ,@args) ,pc))
+
+;; sinr with pc
+(define-macro (qsinr pc . args)
+  `(pc:quantize (sinr ,@args) ,pc))
+
+;; tanr with pc
+(define-macro (qtanr pc . args)
+  `(pc:quantize (tanr ,@args) ,pc))
+
+;; rampr with pc
+(define-macro (qrampr pc . args)
+  `(pc:quantize (rampr ,@args) ,pc))
+
+;; recr with pc
+(define-macro (qrecr pc . args)
+  `(pc:quantize (rectr ,@args) ,pc))
+
+;; trir with pc
+(define-macro (qtrir pc . args)
+  `(pc:quantize (trir ,@args) ,pc))
+
+(define-macro (onbeat? b of t . f)
+  (if (null? f)
+      `(if (= (modulo beat ,of) (- ,b 1))
+           ,t)
+      `(if (= (modulo beat ,of) (- ,b 1))
+           ,t ,(car f))))
+
+
+(define-macro (choose prob a . args)
+  (if (null? args)
+      `(if (< (random) ,prob)
+           ,a)
+      `(if (< (random) ,prob)
+           ,a ,(car args))))
+
+
+
+
+;; (define playp_play_list
+;;   (let ((lst_idx (range 0 1000)))
+;;     (lambda (beat dur pclas inst vols durs lst mod_diff step offset poffset args)
+;;       (let ((duration 0) (volume 0)
+;;             (phase 0))
+;;         (for-each (lambda (x idx t)
+;;                     (if (symbol? x) (set! x (eval x)))
+;;                     (if (list? durs)
+;;                         (if (and (symbol? (car durs))
+;;                                  (defined? (car durs))
+;;                                  (or (closure? (eval (car durs)))
+;;                                      (procedure? (eval (car durs)))
+;;                                      (macro? (eval (car durs)))))                 
+;;                             (set! duration durs)                                                    
+;;                             (if (= (length durs) (length lst))
+;;                                 (set! duration (list-ref durs idx))
+;;                                 (set! duration step)))
+;;                         (set! duration durs))
+;;                     (if (list? vols)
+;;                         (if (and (symbol? (car vols))
+;;                                  (defined? (car vols))
+;;                                  (or (closure? (eval (car vols)))
+;;                                      (procedure? (eval (car vols)))
+;;                                      (macro? (eval (car vols)))))             
+;;                             (set! volume vols)                      
+;;                             (if (= (length vols) (length lst))
+;;                                 (set! volume (list-ref vols idx))
+;;                                 (set! volume 80)))
+;;                         (set! volume vols))
+;;                     (if (list? x)
+;;                         (playp_play_list beat dur pclas inst volume
+;;                                          duration x mod_diff (/ step (length lst)) (+ t offset) poffset args)
+;;                         (if (> x 0)
+;;                             (begin
+;;                               (set! phase (+ mod_diff t offset))
+;;                               (eval
+;;                                `(play ,phase ;(+ mod_diff t offset)
+;;                                       ,inst
+;;                                       ,(pc:quantize (+ x poffset) pclas)
+;;                                       ,volume
+;;                                       ,duration
+;;                                       ,@args))))))
+;;                   lst
+;;                   lst_idx
+;;                   (range 0 step (/ step (length lst))))))))
+
+
+;; (define playp_f
+;;   (let ((offsetlist '(cosr sinr trir recr rampr qcosr qsinr qtrir qrecr qrampr)))
+;;     (lambda (beat dur . args)
+;;       (let ((pclas '(0 1 2 3 4 5 6 7 8 9 10 11))
+;;             (offset 0)
+;;             (poffset 0)
+;;             (data '())
+;;             (inst '())
+;;             (vols '())
+;;             (durs '())
+;;             (datal 0)
+;;             (cycle 0)
+;;             (step 0))
+;;         (if (and (list? (car args)) (> (length args) 5))
+;;             (begin (set! pclas (car args)) (set! args (cdr args))))
+;;         (if (not (or (list? (car args))
+;;                      (string? (car args))))
+;;             (begin (set! offset (car args)) (set! args (cdr args))))
+;;         (if (not (or (list? (car args))
+;;                      (string? (car args))))
+;;             (begin (set! poffset (car args)) (set! args (cdr args))))
+;;         (set! data (car args))
+;;         (if (string? data) (set! data (map (lambda (x) (char->integer x)) (string->list data))))
+;;         (set! args (cdr args))
+;;         (set! datal (length data))
+;;         (set! cycle (car args))
+;;         (set! args (cdr args))
+;;         (set! inst (car args))
+;;         (set! args (cdr args))
+;;         (set! vols (car args))
+;;         (set! args (cdr args))
+;;         (set! durs (car args))
+;;         (set! args (cdr args))
+;;         (set! step (/ cycle datal))
+;;         (let ((local_beat (modulo beat cycle))
+;;               (mod_diff 0)            
+;;               (volume vols)
+;;               (phase 0.0)
+;;               (duration durs)
+;;               (pitch 0))
+;;           (dotimes (i (* 2 datal))
+;;             (set! mod_diff (- (* i step) local_beat))
+;;             (set! pitch (list-ref data (modulo i datal)))
+;;             (if (symbol? pitch) (set! pitch (eval pitch)))
+;;             (if (list? durs)
+;;                 (if (member (car durs) offsetlist)
+;;                     (set! duration durs)
+;;                     (if (= (length durs) datal)
+;;                         (set! duration (list-ref durs (modulo i datal)))                        
+;;                         (set! duration step))))
+;;             (if (list? vols)
+;;                 (if (member (car vols) offsetlist)
+;;                     (set! volume vols)                
+;;                     (if (= (length vols) datal)
+;;                         (set! volume (list-ref vols (modulo i datal)))
+;;                         (set! volume 80))))
+;;             (if (list? pitch)
+;;                 (begin
+;;                   (if (and (>= mod_diff 0)
+;;                            (< mod_diff dur)
+;;                            (not (null? pitch)))
+;;                       (playp_play_list beat dur pclas inst volume duration pitch mod_diff step offset poffset args)))
+;;                 (begin
+;;                   (set! phase (+ mod_diff offset))
+;;                   (if (and (>= mod_diff 0)
+;;                            (< mod_diff dur)
+;;                            (> pitch 0))
+;;                       (eval `(play ,phase ;(+ mod_diff offset)
+;;                                    ,inst
+;;                                    ,(pc:quantize (+ pitch poffset) pclas)
+;;                                    ,volume
+;;                                    ,duration
+;;                                    ,@args))
+;;                       (begin #f))))))))))
+
+;; (define playp_f
+;;   (lambda (beat dur . args)
+;;     (let ((pclas '(0 1 2 3 4 5 6 7 8 9 10 11))
+;;           (offset 0)
+;;           (poffset 0)
+;;           (inst '())
+;;           (data '())            
+;;           (vols '())
+;;           (durs '())
+;;           (datal 0)
+;;           (cycle 0)
+;;           (step 0))
+;;       ;; check for quantizer list
+;;       (if (list? (car args))
+;;           (begin (set! pclas (car args))
+;;                  (set! args (cdr args))))
+;;       ;; now cycle        
+;;       (if (closure? (car args))
+;;           (set! cycle dur)
+;;           (begin
+;;             (set! cycle (car args))
+;;             (set! args (cdr args))))
+;;       ;; if no instrument must be an offset
+;;       (if (not (closure? (car args)))
+;;           (begin (set! offset (car args))
+;;                  (set! args (cdr args))))
+;;       ;; now instrument (which should be a closure!)
+;;       (set! inst (car args))
+;;       (set! args (cdr args))
+;;       ;; if not pitch list must be offset
+;;       (if (not (list? (car args)))
+;;           (begin (set! poffset (car args))
+;;                  (set! args (cdr args))))
+;;       ;; now must be pitch list
+;;       (set! data (car args))
+;;       (set! args (cdr args))
+;;       (set! datal (length data))
+;;       (set! vols (car args))
+;;       (set! args (cdr args))
+;;       (set! durs (car args))
+;;       (set! args (cdr args))
+;;       (set! step (/ cycle datal))
+;;       (let ((local_beat (modulo beat cycle))
+;;             (mod_diff 0)            
+;;             (volume vols)
+;;             (phase 0.0)
+;;             (duration durs)
+;;             (pitch 0))
+;;         (dotimes (i (* 2 datal))
+;;           (set! mod_diff (- (* i step) local_beat))
+;;           (set! pitch (list-ref data (modulo i datal)))
+;;           (if (symbol? pitch) (set! pitch (eval pitch)))
+;;           (if (list? durs)
+;;               (if (and (symbol? (car durs))
+;;                        (defined? (car durs))
+;;                        (or (closure? (eval (car durs)))
+;;                            (procedure? (eval (car durs)))
+;;                            (macro? (eval (car durs)))))
+;;                   (set! duration durs)
+;;                   (if (= (length durs) datal)
+;;                       (set! duration (list-ref durs (modulo i datal)))                        
+;;                       (set! duration step))))
+;;           (if (list? vols) 
+;;               (if (and (symbol? (car vols))        
+;;                        (defined? (car vols))
+;;                        (or (closure? (eval (car vols)))
+;;                            (procedure? (eval (car vols)))
+;;                            (macro? (eval (car vols)))))
+;;                   (set! volume vols)                
+;;                   (if (= (length vols) datal)
+;;                       (set! volume (list-ref vols (modulo i datal)))
+;;                       (set! volume 80))))
+;;           (if (list? pitch)
+;;               (begin
+;;                 (if (and (>= mod_diff 0)
+;;                          (< mod_diff dur)
+;;                          (not (null? pitch)))
+;;                     (playp_play_list beat dur pclas inst volume duration pitch mod_diff step offset poffset args)))
+;;               (begin
+;;                 (set! phase (+ mod_diff offset))
+;;                 (if (and (>= mod_diff 0)
+;;                          (< mod_diff dur)
+;;                          (> pitch 0))
+;;                     (eval `(play ,phase ;(+ mod_diff offset)
+;;                                  ,inst
+;;                                  ,(pc:quantize (+ pitch poffset) pclas)
+;;                                  ,volume
+;;                                  ,duration
+;;                                  ,@args))
+;;                     (begin #f)))))))))
+
+
+;; (define-macro (playp . args)
+;;   `(playp_f beat dur ,@args))
+
+
+;; type is '- or '^
+(define fixed-chord
+  (lambda (fixed num key type degree . args)
+    (set! *key* key)
+    (if (equal? type '-)
+        (set! *scale* (pc:scale *key* 'aeolian))
+        (set! *scale* (pc:scale *key* 'ionian)))
+    (set! *chord* (pc:diatonic *key* type degree))
+    (set! *root* (car *chord*))
+    (let ((crd (pc:make-chord-fixed fixed num *chord*)))
+      (if (null? args)
+          crd
+          (if (list? (car args))
+              (make-list-with-indexes crd (car args))
+              crd)))))
+    
+
+;; r = root
+;; q = maj or minor
+;; c = chord
+;; where c can be symbol 'i7 or list '(0 3 7)
+(define set-chord
+  (lambda (r q c)
+    (set! root r)    
+    (set! chord (if (symbol? c) (pc:diatonic root q c) c))
+    (set! scale (pc:scale-from-chord root chord))))
+
+
+
+(if (not (impc:aot:currently-compiling?))
+    (begin
+      ;; (eval '(bind-val Metro Metronome*)
+      ;;       (interaction-environment))
+      ;; (eval
+      ;;  '(bind-func metro_init
+      ;;     (lambda (bpm:double offset:i64 n:i64 d:i64)
+      ;;       (if (not (null? Metro)) (hfree Metro))
+      ;;       (set! Metro (hcopy (MakeMetro_4 bpm offset n d)))
+      ;;       void))
+      ;;  (interaction-environment))
+      ;; (metro_init 120. 0 0 1)
+      (sys:load "libs/core/pc_ivl.xtm")))
+
+

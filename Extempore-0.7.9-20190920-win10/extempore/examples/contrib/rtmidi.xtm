@@ -1,0 +1,82 @@
+;;; midi.xtm -- sending/recieving MIDI in Extempore
+
+;; Author: Ben Swift
+;; Keywords: extempore
+;; Required dylibs: rtmidi
+
+;;; Commentary:
+
+;; **NOTE** rtmidi support in extempore is deprecated (although this
+;; file might still work for you). MIDI support is now provided
+;; through PortMidi - see examples/external/portmidi.xtm
+
+;; The rtmidi library is a cross-platform MIDI library by Gary P.
+;; Scavone.
+
+;; Source and documentation for the rtmidi library is available at
+;; http://music.mcgill.ca/~gary/rtmidi/
+
+;; If you installed an Extempore binary, then you should have the
+;; rtmidi lib in your runtime/lib directory. If not, see instructions
+;; in libs/external/rtmidi.xtm for how to build a rtmidi library that
+;; Extempore can use.
+
+(sys:load "libs/core/audio_dsp.xtm")
+(sys:load "libs/external/rtmidi.xtm")
+
+;; trivial dsp routine with exposed freq param
+(bind-func dsp:DSP
+  (let ((freql:SAMPLE 110.)
+        (freqr:SAMPLE 110.)
+        (oscl (osc_c 0.0))
+        (oscr (osc_c 0.0)))
+    (lambda (in time chan dat)
+      (if (= chan 0)
+          (oscl 0.2 freql)
+          (oscr 0.2 freqr)))))
+
+(dsp:set! dsp)
+
+(define *midi-in* (midi_new_indevice))
+(define *midi-out* (midi_new_outdevice))
+
+;; query for valid midi output devices
+(midi_query_outports *midi-out*)
+;; query for valid midi input
+(midi_query_inports *midi-in*)
+
+;; write a midi receiver which will
+;; use control change messages to change
+;; the pitch of an oscillator
+(bind-func midi_cc_receive
+  (let ((type:i8 0) (chan:i8 0) (a:i8 0) (b:i8 0)
+        (left:i8 1) (right:i8 2))
+    (lambda (time:double len:i64 msg:i8*)
+      (set! type (>> (pref msg 0) 4))
+      (set! chan (& (pref msg 0) 15))
+      (set! a (pref msg 1))
+      (set! b (pref msg 2))
+      (println type chan a b)
+      (if (= a left) (dsp.freql (+ 110. (pow (i8tof b) 1.25))))
+      (if (= a right) (dsp.freqr (+ 110. (pow (i8tof b) 1.25))))
+      void)))
+
+;; register an *midi-in* to "midi_callback"
+(midi_register_device *midi-in* "midi_cc_receive")
+;; open an input port (assuming port 0)
+(midi_open_inport *midi-in* 0)
+;; should now be printing any incoming midi data
+
+;; now open output port (assuming port 0)
+(midi_open_outport *midi-out* 0)
+;; and send a stream of control messages
+(midi_send *midi-out* 11 0 8 90)
+
+;; stream control change message back out!
+(define stream-messages
+  (lambda (beat dur)
+    (midi_send *midi-out* *midi-cc* 0 1 (real->integer (cosr 60 60 1/4)))
+    (callback (*metro* (+ beat (* .5 dur))) 'stream-messages (+ beat dur) dur)))
+
+(stream-messages (*metro* 'get-beat 4) 1/4)
+

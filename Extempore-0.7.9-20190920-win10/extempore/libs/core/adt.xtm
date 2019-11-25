@@ -1,0 +1,853 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Extempore's data types library
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; lib-loading config
+(sys:load-preload-check 'adt)
+(define *xtmlib-adt-loaded* #t)
+
+(impc:aot:suppress-aot-do
+ (sys:load "libs/base/base.xtm"))
+(impc:aot:insert-forms (sys:load "libs/base/base.xtm" 'quiet))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; fully generalised first and second
+
+(bind-func first:[!a,!b]*
+  (lambda (a)
+    (tref a 0)))
+
+(bind-func second:[!a,!b]*
+  (lambda (a)
+    (tref a 1)))
+
+;;;;;;;;;;;;;;;;;;;;
+;; points
+
+(bind-type Point <!a,!a>)
+
+(bind-func print:[void,Point*]*
+  (lambda (p)
+    (if (null? p)
+        (begin (printout "<>") void)
+        (begin (printout "<"
+                         (tref p 0) ","
+                         (tref p 1) ">")
+               void))))
+
+(bind-func first:[!a,Point{!a}*]*
+  (lambda (a)
+    (tref a 0)))
+
+(bind-func second:[!a,Point{!a}*]*
+  (lambda (a)
+    (tref a 1)))
+
+;;;;;;;;;;;;;;;;;;;;
+;; pairs
+
+(bind-type Pair <!a,!b>)
+
+(bind-func print:[void,Pair*]*
+  (lambda (p)
+    (if (null? p)
+        (begin (printout "<>") void)
+        (begin (printout "<" (tref p 0) "," (tref p 1) ">")
+               void))))
+
+(bind-func first:[!a,Pair{!a,!b}*]*
+  (lambda (a)
+    (tref a 0)))
+
+(bind-func second:[!b,Pair{!a,!b}*]*
+  (lambda (a)
+    (tref a 1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; singly linked lists
+;;
+(bind-type List <!a,List*>)
+
+(bind-func print:[void,List*]*
+  (lambda (xs)
+    (if (null? xs)
+        (begin (printout "()") void)
+        (begin
+          (printout "(" (car xs))
+          (for-each (lambda (x) (printout " " x)) (cdr xs))
+          (printout ")")
+          void))))
+
+(bind-func toString:[String*,List*]*
+  (lambda (xs)
+    (if (null? xs)
+        (sprintln "()")
+        (let ((ska:String* (sprintout "(" (car xs))))
+          (for-each (lambda (xz)
+                      (set! ska (sprintout ska " " xz)))
+                    (cdr xs))
+          (sprintout ska ")")))))
+
+(bind-func cons:[List{!a}*,!a,List{!a}*]*
+  (lambda (x y)
+    (let ((obj (alloc)))
+      (tset! obj 0 x)
+      (tset! obj 1 y)
+      obj)))
+
+(bind-func cons_h:[List{!a}*,!a,List{!a}*]*
+  (lambda (x y)
+    (let ((obj (halloc)))
+      (tset! obj 0 x)
+      (tset! obj 1 y)
+      obj)))
+
+(bind-func car:[!a,List{!a}*]*
+  (lambda (a)
+    (tref a 0)))
+
+(bind-func cdr:[List{!a}*,List{!a}*]*
+  (lambda (a)
+    (tref a 1)))
+
+(bind-func set_car:[!a,List{!a}*,!a]*
+  (lambda (a val)
+    (tset! a 0 val)))
+
+(bind-func set_cdr:[List{!a}*,List{!a}*,,List{!a}*]*
+  (lambda (a val)
+    (tset! a 1 val)))
+
+(bind-func length:[i64,List{!a}*]*
+  (lambda (a)
+    (if (null? a)
+        0
+        (+ 1 (length (cdr a))))))
+
+(bind-func copy:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (let ((orig lst)
+          (cpy null))
+      (while (not (null? orig))
+        (set! cpy (cons (car orig) cpy))
+        (set! orig (cdr orig)))
+      (reverse cpy))))
+
+(bind-func copy_h:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (let ((orig lst)
+          (cpy null))
+      (while (not (null? orig))
+        (set! cpy (cons_h (car orig) cpy))
+        (set! orig (cdr orig)))
+      (reverse cpy))))
+
+(bind-func equal:[bool,List{!a}*,List{!a}*]*
+  "returns true if 'equal' returns true for all pairs of elements"
+  (lambda (list1 list2)
+    (every (lambda (a b) (equal a b)) list1 list2)))
+
+(bind-func nth_tailr:[List{!a}*,List{!a}*,i64]*
+  (lambda (lst idx)
+    (let ((nt (lambdas (l i cnt)
+                       (if (or (= cnt i) (> cnt i) (null? l))
+                           l
+                           (nt (cdr l)
+                               i
+                               (+ cnt 1))))))
+      (let ((r (nt lst idx 0)))
+        r))))
+
+(bind-func nth_tail:[List{!a}*,List{!a}*,i64]*
+  (lambda (lst idx)
+    (if (or (<= idx 0) (null? lst))
+        lst
+        (nth_tail (cdr lst) (- idx 1)))))
+
+(bind-func nthr:[!a,List{!a}*,i64]*
+  (lambda (lst idx)
+    (car (nth_tailr lst idx))))
+
+(bind-func nth:[!a,List{!a}*,i64]*
+  (lambda (lst idx)
+    (car (nth_tail lst idx))))
+
+(bind-func insert:[List{!a}*,List{!a}*,i64,!a]*
+  (lambda (lst idx value)
+    (if (= idx 0)
+        (cons value lst)
+        (let ((pre_cell (nth_tail lst (- idx 1)))
+              (new_cell (cons value (cdr pre_cell))))
+          (tset! pre_cell 1 new_cell)
+          lst))))
+
+(bind-func delete:[!a,List{!a}*,i64]*
+  (lambda (lst idx)
+    (let ((pre_cell (nth_tail lst (- idx 1)))
+          (cell (cdr pre_cell))
+          (post_cell (cdr cell)))
+      (tset! pre_cell 1 post_cell)
+      (car cell))))
+
+(bind-func reverse_inline:[List{!a}*,List{!a}*,List{!a}*]*
+  (lambda (old new)
+    (if (null? old) new
+        (reverse_inline (cdr old) (cons (car old) new)))))
+
+(bind-func reverse:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (reverse_inline lst (convert null))))
+
+(bind-func reverse_r:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (let ((rev (lambda (old new)
+                 (if (null? old)
+                     new
+                     (rev (cdr old) (cons (car old) new))))))
+      (rev lst (convert null)))))
+
+;; this map IS tail optimized!
+(bind-func map_t:[List{!a}*,[!a,!b]*,List{!b}*]*
+  (lambda (func xs)
+    (let ((f (lambda (accum l)
+               (if (null? l)
+                   (reverse accum)
+                   (f (cons (func (car l)) accum) (cdr l))))))
+      (f null xs))))
+
+;; this map is NOT tail optimized
+(bind-func map:[List{!a}*,[!a,!b]*,List{!b}*]*
+  (lambda (func xs)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   null
+                   (cons (func (car l)) (f (cdr l)))))))
+      (f xs))))
+
+;; this map is NOT tail optimized
+(bind-func map:[List{!a}*,[!a,!b,!c]*,List{!b}*,List{!c}*]*
+  (lambda (func xs1 xs2)
+    (let ((f (lambda (l1 l2)
+               (if (null? l1)
+                   null
+                   (cons (func (car l1) (car l2))
+                         (f (cdr l1) (cdr l2)))))))
+      (f xs1 xs2))))
+
+;; this map is NOT tail optmized
+(bind-func map:[List{!a}*,[!a,!b,!c,!d]*,List{!b}*,List{!c}*,List{!d}*]*
+  (lambda (func xs1 xs2 xs3)
+    (let ((f (lambda (l1 l2 l3)
+               (if (null? l1)
+                   null
+                   (cons (func (car l1) (car l2) (car l3))
+                         (f (cdr l1) (cdr l2) (cdr l3)))))))
+      (f xs1 xs2 xs3))))
+
+(bind-func filter:[List{!a}*,[bool,!a]*,List{!a}*]*
+  (lambda (pred xs)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   null
+                   (if (pred (car l))
+                       (cons (car l) (f (cdr l)))
+                       (f (cdr l)))))))
+      (f xs))))
+
+(bind-func index_of:[size_t,!a,List{!a}*]*
+  "return index of first occurrence of element in lst, or -1 if not present"
+  (lambda (element lst)
+    (let ((f (lambda (l cnt)
+               (if (null? l)
+                   -1
+                   (if (equal element (car l))
+                       cnt
+                       (f (cdr l) (set! cnt (+ cnt 1))))))))
+      (f lst 0))))
+
+(bind-func index_of:[size_t,!a,List{!a}*,[bool,!a,!a]*]*
+  "return index of first occurrence of element in lst, or -1 if not present"
+  (lambda (element lst pred)
+    (let ((f (lambda (l cnt)
+               (if (null? l)
+                   -1
+                   (if (pred element (car l))
+                       cnt
+                       (f (cdr l) (set! cnt (+ cnt 1))))))))
+      (f lst 0))))
+
+(bind-func member:[List{!a}*,!a,List{!a}*]*
+  (lambda (element lst)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   null
+                   (if (equal element (car l))
+                       l
+                       (f (cdr l)))))))
+      (f lst))))
+
+
+(bind-func member:[List{!a}*,!a,List{!a}*,[bool,!a,!a]*]*
+  (lambda (element lst pred)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   null
+                   (if (pred element (car l))
+                       l
+                       (f (cdr l)))))))
+      (f lst))))
+
+(bind-func any:[bool,[bool,!a]*,List{!a}*]*
+  (lambda (pred lst)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   #f
+                   (if (pred (car l))
+                       #t
+                       (f (cdr l)))))))
+      (f lst))))
+
+(bind-func any:[bool,[bool,!a,!b]*,List{!a}*,List{!b}*]*
+  (lambda (pred lst1 lst2)
+    (let ((f (lambda (l1 l2)
+               (if (or (null? l1) (null? l2))
+                   #f
+                   (if (pred (car l1) (car l2))
+                       #t
+                       (f (cdr l1) (cdr l2)))))))
+      (f lst1 lst2))))
+
+(bind-func every:[bool,[bool,!a]*,List{!a}*]*
+  (lambda (pred lst)
+    (let ((f (lambda (l)
+               (if (null? l)
+                   #t
+                   (if (not (pred (car l)))
+                       #f
+                       (f (cdr l)))))))
+      (f lst))))
+
+(bind-func every:[bool,[bool,!a,!b]*,List{!a}*,List{!b}*]*
+  (lambda (pred lst1 lst2)
+    (let ((f (lambda (l1 l2)
+               (if (or (null? l1) (null? l2))
+                   #t
+                   (if (not (pred (car l1) (car l2)))
+                       #f
+                       (f (cdr l1) (cdr l2)))))))
+      (f lst1 lst2))))
+
+(bind-func for-each:[void,[!a,!b]*,List{!b}*]*
+  (lambda (func xs)
+    (let ((f (lambda (l)
+               (if (null? l) void
+                   (begin (func (car l))
+                          (f (cdr l)))))))
+      (f xs))))
+
+(bind-func for-each:[void,[!a,!b,!c]*,List{!b}*,List{!c}*]*
+  (lambda (func xs1 xs2)
+    (let ((f (lambda (l1 l2)
+               (if (null? l1) void
+                   (begin (func (car l1) (car l2))
+                          (f (cdr l1) (cdr l2)))))))
+      (f xs1 xs2))))
+
+(bind-func for-each:[void,[!a,!b,!c,!d]*,List{!b}*,List{!c}*,List{!d}*]*
+  (lambda (func xs1 xs2 xs3)
+    (let ((f (lambda (l1 l2 l3)
+               (if (null? l1) void
+                   (begin (func (car l1) (car l2) (car l3))
+                          (f (cdr l1) (cdr l2) (cdr l3)))))))
+      (f xs1 xs2 xs3))))
+
+(bind-func last:[List{!a}*,List{!a}*]*
+  (lambda (a)
+    (if (null? (cdr a))
+        a
+        (last (cdr a)))))
+
+(bind-func range:[List{!a}*,!a]*
+  (lambda (end)
+    (let ((val (- end (convert 1)))
+          (result null))
+      (while (>= val (convert 0))
+        (set! result (cons val result))
+        (set! val (- val (convert 1))))
+      result)))
+
+(bind-func range:[List{!a}*,!a,!a]*
+  (lambda (start end)
+    (let ((val (- end (convert 1)))
+          (result null))
+      (while (>= val start)
+        (set! result (cons val result))
+        (set! val (- val (convert 1))))
+      result)))
+
+(bind-func range:[List{!a}*,!a,!a,!a]*
+  (lambda (start end step)
+    (if (<= step 0)
+        (begin (println "Problem in call to range: step must be positive")
+               null)
+        (let ((val start)
+              (result null))
+          (while (< val end)
+            (set! result (cons val result))
+            (set! val (+ val step)))
+          (reverse result)))))
+
+(bind-func append:[List{!a}*,List{!a}*,List{!a}*]*
+  (lambda (a b)
+    (if (null? a) b
+        (begin
+          (tset! (last a) 1 b)
+          a))))
+
+(bind-func swap:[List{!a}*,List{!a}*,i64,i64]*
+  ;; swap ith and jth list elements inplace
+  (lambda (lst i j)
+    (let ((ith_val (nth lst i)))
+      (set_car (nth_tail lst i) (nth lst j))
+      (set_car (nth_tail lst j) ith_val))
+    lst))          
+
+;; fold/reduce
+
+(bind-func foldl:[!b,[!b,!b,!a]*,!b,List{!a}*]*
+  (lambda (fn start lst)
+    (let ((fold (lambda (l r) ; list result
+                  (if (null? l)
+                      r
+                      (fold (cdr l) (fn r (car l)))))))
+      (fold lst start))))
+
+(bind-func foldr:[!b,[!b,!a,!b]*,!b,List{!a}*]*
+  (lambda (fn end lst)
+    (let ((fold (lambda (l r) ; list result
+                  (if (null? l)
+                      r
+                      (fold (cdr l) (fn (car l) r))))))
+      (fold (reverse lst) end))))
+
+(bind-func scanl:[List{!b}*,[!b,!b,!a]*,!b,List{!a}*]*
+  (lambda (fn start lst)
+    (let ((scan (lambda (l rl)
+                  (if (null? l) rl
+                      (scan (cdr l)
+                            (cons (fn (car rl)
+                                      (car l))
+                                  rl))))))
+      (reverse (scan lst (list start))))))
+
+(bind-func scanr:[List{!b}*,[!b,!b,!a]*,!b,List{!a}*]*
+  (lambda (fn end lst)
+    (let ((scan (lambda (l rl)
+                  (if (null? l) rl
+                      (scan (cdr l)
+                            (cons (fn (car rl)
+                                      (car l))
+                                  rl))))))
+      (reverse (scan (reverse lst) (list end))))))
+
+(bind-func take:[List{!a}*,List{!a}*,i64]*
+  "returns a copy of the first n elements of lst"
+  (lambda (lst n)
+    (let ((newlst (list))
+          (oldlst lst)
+          (count 0))
+      (while (and (< count n)
+                  (not (null? oldlst)))
+        (set! newlst (cons (car oldlst) newlst))
+        (set! oldlst (cdr oldlst))
+        (set! count  (+ count 1)))
+      (reverse newlst))))
+
+(bind-func drop:[List{!a}*,List{!a}*,i64]*
+  "returns a copy of lst sans the first n elements"
+  (lambda (lst n)
+    (copy (nth_tail lst n))))
+
+(bind-func duplicates:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (let ((dupes (list)))
+      (while (not (null? lst))
+        (if (not (null? (member (car lst) (cdr lst))))
+            (set! dupes (cons (car lst) dupes)))
+        (set! lst (cdr lst)))
+      (reverse dupes))))
+
+(bind-func unique:[List{!a}*,List{!a}*]*
+  (lambda (lst)
+    (let ((unq (list)))
+      (while (not (null? lst))
+        (if (null? (member (car lst) (cdr lst)))
+            (set! unq (cons (car lst) unq)))
+        (set! lst (cdr lst)))
+      (reverse unq))))
+
+(bind-func intersection:[List{!a}*,List{!a}*,List{!a}*]*
+  (lambda (l1 l2)
+    (duplicates (append (unique l1) (unique l2)))))
+
+(bind-func union:[List{!a}*,List{!a}*,List{!a}*]*
+  (lambda (l1 l2)
+    (unique (append l1 l2))))
+
+
+(bind-func random:[!a,List{!a}*]*
+  (lambda (lst)
+    (let ((lgth (length lst))
+          (idx:i64 (random lgth)))
+      (nth lst idx))))
+
+(bind-func flatten:[List{!a}*,List{List{!a}*}*]*
+  (lambda (nl)
+    (foldl (lambda (acc x) (append acc x)) (list) nl)))
+
+
+(bind-func rotate:[List{!a}*,List{!a}*,i64]*
+  (lambda (l n)
+    (if (< n 0)
+        (append (drop l (* -1 n)) (take l (* -1 n)))
+        (append (drop l (- (length l) n))
+                (take l (- (length l) n))))))
+
+;; push can't really work without changing the cells around, and can
+;; never work for the (push 42 (list)) case, so it's best to not use
+;; it for the moment
+
+;; (bind-func push:[void,!a,List:<!a,List*>*]*
+;;   "add element to head of list (modifies list in-place)"
+;;   (lambda (element lst)
+;;     (set! lst (cons element lst))
+;;     void))
+
+(bind-func pop:[!a,List{!a}*]*
+  "pop first element from list (modifies list in-place)"
+  (lambda (lst)
+    (if (null? lst)
+        (convert null)
+        (let ((element (car lst)))
+          (set! lst (cdr lst))
+          element))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; a simple 'assoc' dictionary
+;;
+;; the "dictionary" is any List of Pairs
+;; where the pair is any <String*,!a>
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(bind-func dict_get:[!v,List{Pair{String*,!v}*}*,String*]*
+  "find value for key in dict (which must be a list of any <i8*,!v>)"
+  (lambda (dict key)
+    (if (null? dict)
+        (convert null)
+        (if (equal (first (car dict)) key)
+            (second (car dict))
+            (dict_get (cdr dict) key)))))
+
+(bind-func dict_set:[!v,List{Pair{String*,!v}*}*,String*,!v]*
+  "set (or overwrite) value for key in dict (returns the old value)"
+  (lambda (dict key value)
+    (if (null? dict)
+        (convert null)
+        (if (equal (first (car dict)) key)
+            (let ((oldval (second (car dict))))
+              (tset! (car dict) 1 value)
+              oldval)
+            (if (null? (cdr dict))
+                (begin (append dict (list (Pair key value)))
+                       (convert null))
+                (dict_set (cdr dict) key value))))))
+
+(bind-func dict_update:[!v,List{Pair{String*,!v}*}*,String*,[!v,!v]*]*
+  "set (or update) value for key in dict according to update_fn (returns the old value)"
+  (lambda (dict key update_fn)
+    (if (null? dict)
+        (convert null)
+        (if (equal (first (car dict)) key)
+            (let ((oldval (second (car dict)))
+                  (newval (update_fn oldval)))
+              ;; if update_fn returns null, do nothing. otherwise
+              ;; update the value for key
+              (tset! (car dict) 1 newval)
+              oldval)
+            (if (null? (cdr dict))
+                (begin (append dict (list (Pair key (update_fn (convert null)))))
+                       (convert null))
+                (dict_update (cdr dict) key update_fn))))))
+
+;;;;;;;;;;;
+;; TREES ;;
+;;;;;;;;;;;
+
+;; Binary Tree
+
+(bind-type BTree <!v,BTree*,BTree*>)
+
+(bind-func print:[void,BTree*]*
+  (lambda (tree)
+    (printout "<")
+    (let ((f (lambda (tree)
+               (if (null? tree) void
+                   (begin
+                     (printout (BTree_value tree) " ")
+                     (f (tref tree 1))
+                     (f (BTree_right tree))
+                     void)))))
+      (f tree)
+      (printout ">")
+      void)))
+
+(bind-func BTree_leaf:[BTree{!a}*,!a]*
+  (lambda (value)
+    (BTree value null null)))
+
+(bind-func BTree_value:[!a,BTree{!a}*]*
+  (lambda (tree)
+    (tref tree 0)))
+
+(bind-func BTree_left:[BTree*,BTree*]*
+  (lambda (tree)
+    (tref tree 1)))
+
+(bind-func BTree_right:[BTree*,BTree*]*
+  (lambda (tree)
+    (tref tree 2)))
+
+(bind-func BTree_map:[BTree{!v}*,BTree{!r}*,[!v,!r]*]*
+  (lambda (tree fn)
+    (if (null? tree) null
+        (BTree (fn (tref tree 0))
+               (BTree_map fn (tref tree 1))
+               (BTree_map fn (BTree_right tree))))))
+
+(bind-func BTree_walk_preorder:[void,BTree{!v}*,[void,!v]*]*
+  (lambda (tree fn)
+    (if (null? tree) null
+        (begin
+          (fn (tref tree 0))
+          (BTree_walk_preorder fn (BTree_left tree))
+          (BTree_walk_preorder fn (BTree_right tree))))))
+
+(bind-func BTree_walk_inorder:[void,BTree{!v}*,[void,!v]*]*
+  (lambda (tree fn)
+    (if (null? tree) null
+        (begin
+          (BTree_walk_inorder fn (BTree_left tree))
+          (fn (tref tree 0))
+          (BTree_walk_inorder fn (BTree_right tree))))))
+
+(bind-func BTree_walk_postorder:[void,BTree{!v}*,[void,!v]*]*
+  (lambda (tree fn)
+    (if (null? tree) null
+        (begin
+          (BTree_walk_postorder fn (BTree_left tree))
+          (BTree_walk_postorder fn (BTree_right tree))
+          (fn (tref tree 0))))))
+
+;; ;; imperative version
+;; (bind-func BTree_walk_preorder:[void,BTree:<!v,BTree*,BTree*>*,[void,!v]*]
+;;   (lambda (tree fn)
+;;     (let ((to_visit (list)))
+;;       (while (not (or (null? to_visit)
+;;                       (null? tree)))
+;;         (if (not (null? tree))
+;;             (begin
+;;               ;; call the render callback
+;;               (fn (tref tree 0))
+;;               ;; set the other children to walk later
+;;               (if (not (null? (cdr (tref tree 5))))
+;;                   (set! to_visit
+;;                         (append (cdr (tref tree 5))
+;;                                 to_visit)))
+;;               ;; keep walking deeper
+;;               (set! tree (car (tref tree 5))))
+;;             (begin
+;;               ;; go back up and walk a different branch
+;;               (set! tree (car to_visit))
+;;               (set! to_visit (cdr to_visit))))))))
+
+
+;; a generic tree
+
+;; (bind-type Tree <!nt,List:<Tree*,List*>*>)
+
+;; (bind-func Tree_walk_preorder:[void,Tree:<!nt,List:<Tree*,List*>*>,[void,!nt]*]
+;;   (lambda (tree fn)
+;;     (let ((to_visit (list)))
+;;       (while (not (or (null? to_visit)
+;;                       (null? tree)))
+;;         (if (not (null? tree))
+;;             (begin
+;;               ;; call the render callback
+;;               (fn (tref tree 0))
+;;               ;; set the other children to walk later
+;;               (if (not (null? (cdr (tref tree 5))))
+;;                   (set! to_visit
+;;                         (append (cdr (tref tree 5))
+;;                                 to_visit)))
+;;               ;; keep walking deeper
+;;               (set! tree (car (tref tree 5))))
+;;             (begin
+;;               ;; go back up and walk a different branch
+;;               (set! tree (car to_visit))
+;;               (set! to_visit (cdr to_visit))))))))
+
+;; (bind-func Tree_find:[]
+;;   (lambda (tree visit)
+;;     ))
+
+;; (bind-func Tree_map:[]
+;;   (lambda (tree visit)
+;;     ))
+
+;; (bind-func Tree_reduce:[]
+;;   (lambda (tree visit)
+;;     ))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Some extra string and symbol stuff
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(bind-func regex_match
+  (lambda (regex str:String*)
+    (rmatch regex (cstring str))))
+
+(bind-func regex_match
+  (lambda (regex:String* str:String*)
+    (rmatch (cstring regex) (cstring str))))
+
+(bind-func regex_match
+  (lambda (regex sym:Symbol*)
+    (rmatch regex (cstring sym))))
+
+(bind-func regex_match
+  (lambda (regex:Symbol* sym:Symbol*)
+    (rmatch (cstring regex) (cstring sym))))
+
+(bind-func regex_split
+  (lambda (regex str)
+    (let ((a:i8* (salloc 2048))
+          (b:i8* (salloc 2048)))
+      (sprintf a "")
+      (sprintf b "")
+      (rsplit regex (cstring str) a b)
+      (append (list (if (> (strlen a) 0)
+                        (String a) (String str)))
+              (if (> (strlen b) 0)
+                  (regex_split regex (String b))
+                  null)))))
+
+;; (bind-func regex_split
+;;   (lambda (regex str)
+;;     (regex_split (cstring regex) str)))
+
+(bind-func regex_split
+  (lambda (regex sym)
+    (let ((a:i8* (salloc 2048))
+          (b:i8* (salloc 2048)))
+      (sprintf a "")
+      (sprintf b "")
+      (rsplit regex (cstring sym) a b)
+      (append (list (if (> (strlen a) 0)
+                        (Symbol a) (Symbol sym)))
+              (if (> (strlen b) 0)
+                  (regex_split regex (Symbol b))
+                  null)))))
+
+(bind-func regex_replace
+  (lambda (regex str:i8* replace:i8*)
+    (let ((res:i8* (salloc 4096)))
+      (rreplace regex str replace res)
+      (String res))))
+
+(bind-func regex_replace
+  (lambda (regex:i8* str:String* replace:i8*)
+    (regex_replace:[String*,i8*,i8*,i8*]* regex (cstring str) replace)))
+
+(bind-func regex_replace
+  (lambda (regex:i8* str:String* replace:String*)
+    (regex_replace:[String*,i8*,i8*,i8*]* regex (cstring str) (cstring replace))))
+
+(bind-func regex_replace
+  (lambda (regex:String* str:String* replace:String*)
+    (regex_replace:[String*,i8*,i8*,i8*]*
+     (cstring regex) (cstring str) (cstring replace))))
+
+(bind-func regex_replace_all
+  (lambda (regex:i8* str:i8* replace:i8*)
+    (let ((res:i8* (salloc 4096))
+          (tmp:String* (Str str))
+          (cnt 0))
+      (while (and (regex_match regex tmp)
+                  (< cnt 100))
+        (set! tmp (regex_replace regex tmp replace))
+        (set! cnt (+ cnt 1)))
+      tmp)))
+
+(bind-func regex_replace_all
+  (lambda (regex str:String* replace)
+    (regex_replace_all:[String*,i8*,i8*,i8*]* regex (cstring str) replace)))
+
+(bind-func regex_replace_all
+  (lambda (regex str:String* replace:String*)
+    (regex_replace_all:[String*,i8*,i8*,i8*]* regex (cstring str) (cstring replace))))
+
+(bind-func regex_replace_all
+  (lambda (regex:String* str:String* replace:String*)
+    (regex_replace_all:[String*,i8*,i8*,i8*]* (cstring regex) (cstring str) (cstring replace))))
+
+(bind-func regex_matches
+  (lambda (regex:i8* str:i8* maxnum:i64)
+    (let ((slen:i64 (strlen str))
+          (results:i8** (salloc maxnum))
+          (resdata:i8* (salloc (* slen maxnum)))
+          (result:String* null) (i:i64 0) (num 0))
+      (dotimes (i maxnum) (pset! results i (pref-ptr resdata (* i slen))))
+      (set! num (rmatches regex str results maxnum))
+      (if (> num 0)
+          (map (lambda (i:i64) (Str (pref results i)))
+               (range 0 num))
+          null))))
+
+(bind-func regex_matches
+  (lambda (regex:i8* str:String* max)
+    (regex_matches:[List{String*}*,i8*,i8*,i64]* regex (cstring str) max)))
+
+(bind-func regex_matches
+  (lambda (regex:String* str:String* max)
+    (regex_matches:[List{String*}*,i8*,i8*,i64]* (cstring regex) (cstring str) max)))
+
+(bind-func regex_matches
+  (lambda (regex:i8* str:i8*)
+    (regex_matches:[List{String*}*,i8*,i8*,i64]* regex str 50)))
+
+(bind-func regex_matches
+  (lambda (regex:i8* str:String*)
+    (regex_matches:[List{String*}*,i8*,i8*,i64]* regex (cstring str) 50)))
+
+(bind-func regex_matches
+  (lambda (regex:String* str:String*)
+    (regex_matches:[List{String*}*,i8*,i8*,i64]* (cstring regex) (cstring str) 50)))
+
+;; if this is just called `cat' then the auto-generated printers for
+;; some named types don't work. need to investigate...
+(bind-func concat:[String*,List{String*}*]*
+  (lambda (lst)
+    (let ((s (String ""))
+          (n (length lst)) (i 0))
+      (dotimes (i n)
+        (set! s (cat2 s (nth lst i))))
+      s)))

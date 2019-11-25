@@ -1,0 +1,138 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; native threads for xtlang
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(sys:load "libs/core/xthread.xtm")
+
+(bind-func divide-and-conquer  
+  (lambda (cnt:i32)
+    (spawn (lambda ()
+             (printf "cnt:%d thread:%p\n" cnt (thread_self))
+             (thread_sleep 1 0) ;; sleep for a second
+             (if (> cnt 0)
+                 (begin (divide-and-conquer (- cnt 1))
+                        (divide-and-conquer (- cnt 1))))
+             void))
+    void))
+
+($ (divide-and-conquer 3))
+
+;; forka and join
+(bind-func fork-join
+  (lambda ()
+    (letz ((i 0))
+      (printout "Finish Order: ")
+      (sync
+       (dotimes (i 10)
+         (spawn (let ((jj i)) ;; each closure needs it's own i!
+                  (lambda ()
+                    (thread_sleep (dtoi64 (* 5. (random))) 0)
+                    (printout jj)))))
+       1)
+      (println)
+      (println "Joined\n")
+      void)))
+
+  
+(fork-join)
+
+;; futures using async
+
+;;
+;; async returns a 'future' which will
+;; block until a result is ready.
+;; 
+(bind-func await_futures
+  (lambda (num:i64)
+    (letz ((future1 (async (lambda () ;; aysnc accepts zero arguments
+                             (let ((ress 0))
+                               (thread_sleep 5 0)
+                               (doloop (i num) (set! ress (+ ress (* i i i))))
+                              5))))
+           (future2 (async (lambda (x) ;; async also optionally accepts one argument
+                             (thread_sleep 2 0)
+                             x)
+                           10)) ;; must give async the argument to be applied!
+           ;; (future3 (async (lambda () ;; AN INFINITE FUTURE!
+           ;;                   (while (future3.running:i1)
+           ;;                     (thread_sleep 1 0))
+           ;;                   20)))
+           (result 0))
+      (println "\nCheck for finish")
+      (doloop (i 11)
+        ;; (if (> i 7) (async_kill future3)) ;; after 7 force kill future3
+        (println "finished 1:" (async_done future1)
+                 " finished 2:" (async_done future2))
+                 ;" finished 3:" (async_done future3))
+        (thread_sleep 1 0))
+      ;; add the three futures!
+      (set! result (+ (future1) (future2))) ; (future3)))
+      (println "(future1) + (future2) =" result)
+      result)))
+
+(await_futures 10)
+
+;;
+;; parallel map
+;;
+(sys:load "libs/core/adt.xtm")
+(sys:load "libs/core/math.xtm")
+
+(bind-func pmap:[List{!a}*,[!a,!b]*,List{!b}*]*
+  (lambda (func xs)
+    (let ((futures (map (lambda (x) (async func x)) xs))
+          (results (map (lambda (y) (y)) futures)))
+      results)))
+
+(bind-func pmap_test
+  (lambda ()
+    (let ((l1 (range 0 5)))
+      (pmap (lambda (x)
+              (thread_sleep 1 0)
+              (* x x)) l1))))
+
+(bind-func map_test
+  (lambda ()
+    (let ((l1 (range 0 5)))
+      (map (lambda (x)
+             (thread_sleep 1 0)
+             (* x x)) l1))))
+
+($ (letz ((t1 (clock_clock))
+          (l1 (map_test))
+          (t2 (clock_clock))
+          (l2 (pmap_test))
+          (t3 (clock_clock)))
+     (println "serial  :" l1 "->" (- t2 t1) "seconds")
+     (println "parallel:" l2 "->" (- t3 t2) "seconds")
+     void))
+
+(bind-func pmap_test2
+  (lambda (arr:i64* size:i64 num_procs:i64)
+    (let ((subs (/ size num_procs)))
+      (foldl (lambda (a:i64 b) (+ a b)) 0 
+             (pmap (lambda (xs:i64*) (vsum xs subs))
+                   (map (lambda (idx) (pref-ptr arr idx))
+                        (range 0 size subs)))))))
+
+(bind-func map_test2
+  (lambda (arr:i64* size:i64)
+    (vsum arr size)))
+
+($ (letz ((s:i64 100000000)
+          (data:i64* (alloc s))
+          (i 0)
+          (filthy_inline_init (begin (dotimes (i s) (pset! data i i)) 1))
+          (t1 (clock_clock))
+          (l1 (map_test2 data s))
+          (t2 (clock_clock))
+          (l2 (pmap_test2 data s 4))
+          (t3 (clock_clock)))
+     (println)
+     (println "serial   sum:" l1 "->" (- t2 t1) "seconds")
+     (println "parallel sum:" l2 "->" (- t3 t2) "seconds")
+     void))
+
+

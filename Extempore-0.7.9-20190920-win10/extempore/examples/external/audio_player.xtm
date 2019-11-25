@@ -1,0 +1,41 @@
+;;; audio_player.xtm -- a simple audio file player example
+
+;; Author: Ben Swift
+;; Keywords: extempore
+;; Required dylibs: libsndfile
+
+;;; Commentary:
+
+;; You should have a wave file in your assets directory called
+;; assets/bb.wav - if you don't you can grab the whole assets
+;; directory from http://extempore.moso.com.au/extras/assets.tgz
+
+;;; Code:
+
+(sys:load "libs/external/sndfile.xtm")
+
+(bind-func dsp:DSP
+  (let ((audio_file_path "assets/samples/xmas_carol.wav")
+        ;; get number of channels/frames in file
+        (nchan (convert (sf_channels_from_file audio_file_path)))
+        (nframes (sf_frames_from_file audio_file_path))
+        (nsamp (* nchan nframes))
+        ;; allocate memory buffer for audio samples
+        (audio_data:SAMPLE* (zalloc nsamp))
+        ;; read audio samples into buffer
+        (samples_read (sf_read_file_into_buffer audio_file_path audio_data 0 nframes #t))
+        ;; markers for keeping track of playback position
+        (playhead 0)
+        (i 0))
+    (if (< samples_read 0)
+        (printf "Error reading audio file.\n"))
+    (lambda (in time chan dat)
+      ;; increment playhead (this is the most basic playback possible
+      ;; - it's not channel aware, it just steps through the buffer
+      ;; one sample at a time)
+      (set! playhead (modulo (+ playhead 1) nsamp))
+      ;; play audio
+      (* 1.0 (pref audio_data playhead)))))
+
+;; now set the dsp closure to start the audio
+(dsp:set! dsp)

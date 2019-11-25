@@ -58,6 +58,7 @@ def ChanceToTimeStamp(lst1, lst2, lst3,):
         else:
             timestamps.append([noteDurationCounter, 0])
             timestampCounter = timestampCounter + 1
+    return timestamps
 ##makes a completly random fill
 def MakeAFill():
     timestampCounter = 0
@@ -97,6 +98,7 @@ def MakeAFill():
         else:
             fillTimeStamp.append([noteDurationCounter, 0])
             timestampCounter = timestampCounter + 1
+    return fillTimeStamp
 ##plays a loop made of a list that is made by either the MakeAFill function or the ChanceToTimeStamp function
 def PlayLoopOnce(lst):
     global timestamps
@@ -144,11 +146,9 @@ def PlayLoopOnce(lst):
         timestamps = deepcopy(copyOfTimestamps)
         PlayLoopOnce(timestamps)
     else:
-        MakeAFill()
         timestamps = deepcopy(copyOfTimestamps)
         loops = 0
-        PlayLoopOnce(fillTimeStamp)
+        PlayLoopOnce(MakeAFill())
 
 ## makes a list from existing chance lists and then plays the loop with the lists
-ChanceToTimeStamp(kickList, snareList, hiHatList)
-PlayLoopOnce(timestamps)
+PlayLoopOnce(ChanceToTimeStamp(kickList, snareList, hiHatList))

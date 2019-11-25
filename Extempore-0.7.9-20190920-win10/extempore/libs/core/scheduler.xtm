@@ -1,0 +1,211 @@
+;; schedule.xtm -- rudimenary xtlang 'native' scheduling 
+
+;; Author: Andrew Sorensen
+;; Keywords: extempore
+;; Required dylibs:
+
+;;; Commentary:
+
+;; This code is here as a jump off point.
+;; it is NOT tested, nor ready for prime time.
+
+;;; Code:
+
+(if *impc:compiler:with-cache* (sys:load "libs/aot-cache/scheduler.xtm" 'quiet))
+(sys:load-preload-check 'scheduler)
+(define *xtmlib-scheduler-loaded* #t)
+
+(impc:aot:suppress-aot-do (sys:load "libs/core/rational.xtm"))
+(impc:aot:suppress-aot-do (sys:load "libs/core/xthread.xtm"))
+
+(impc:aot:insert-forms (sys:load "libs/core/rational.xtm"))
+(impc:aot:insert-forms (sys:load "libs/core/xthread.xtm"))
+
+(impc:aot:insert-header "xtmscheduler")
+(impc:aot:import-ll "xtmscheduler")
+
+
+(bind-type SchedEvt <!a,i8*,SchedEvt*,SchedEvt*>)
+
+(bind-func scheduler_init:[[i64,!a]*,SchedEvt{!a}*,[void,!a]*]*
+  (lambda (el f)
+    (let ((mutex:i8* (mutex_create))
+          (thread:i8* (thread_self))
+          (cnt 0)
+          (evtlist:SchedEvt* el)
+          (fp:[void,!a]* f)
+          (element:SchedEvt* null)
+          (next:SchedEvt* null)
+          (prev:SchedEvt* null))
+      (lambda (time)
+        (set! cnt 0)
+        (mutex_lock mutex)                                 
+        (set! element evtlist)
+        (while (and (not (null? element))
+                    (<= (tref element 0) time))
+          (set! cnt (+ cnt 1))
+          (set! fp (cast (llvm_get_function_ptr (tref element 1))))
+          ;; (println "exec: " time ":" (tref element 0))
+          (fptrcall fp (tref element 0)) ; (tref element 2))
+          (set! next (tref element 3))          
+          (set! prev (tref element 2))
+          (if (null? prev)
+              (set! evtlist next)
+              (tset! prev 3 next))
+          (if (not (null? next)) (tset! next 2 prev))
+          (free element)
+          (set! element next))
+        (mutex_unlock mutex)
+        cnt))))
+
+(bind-func scheduler_at:[SchedEvt*,SchedEvt*,!a]*
+  (let ((prev:SchedEvt* null))
+    (lambda (evtlist time)
+      (set! prev null)
+      (while (and (not (null? evtlist))
+                  (<= (tref evtlist 0) time))
+        (set! prev evtlist)
+        (set! evtlist (tref evtlist 3)))
+      prev)))
+
+(bind-func scheduler_evt:[void,[i64,!a]*,!a,i8*]*
+  (let ((evtlist:SchedEvt* null)
+        (next:SchedEvt* null)
+        (new:SchedEvt* null))
+    (lambda (scheduler time fname)
+      ;; (println "sched:" scheduler time fname data)
+      (if (= (thread_equal_self (scheduler.thread)) 0)
+          (mutex_lock (scheduler.mutex)))
+      (set! evtlist (scheduler_at (scheduler.evtlist) time))
+      (if (null? evtlist)
+          (begin
+            (set! next (scheduler.evtlist))
+            (set! new (SchedEvt_h time fname null next))
+            (scheduler.evtlist new)
+            void)
+          (begin
+            (set! next (tref evtlist 3)) ;; get next from previous
+            (set! new (SchedEvt_h time fname evtlist next))
+            (tset! evtlist 3 new) ;; make us next of previous            
+            (if (not (null? next)) (tset! next 2 new)) ;; set us to previous of next
+            void))
+      (if (= (thread_equal_self (scheduler.thread)) 0)
+          (mutex_unlock (scheduler.mutex)))
+      void)))
+
+(bind-alias SCHED [void]*)
+
+(bind-macro
+  ""
+  (sched sname time fname)
+  `(scheduler_evt (,(string->symbol (string-append (symbol->string sname) ".scheduler")))
+                  ,time (get_native_name ,fname)))
+
+
+(bind-alias CLOCKEVT [void,double]*)
+
+(bind-func clock_scheduler
+  (lambda (hz:double)
+    (let ((evtlist:SchedEvt{double}* null)
+          (ft:[void,double]* null)
+          (scheduler:[i64,double]* null)
+          (running:i64 1)
+          (time 0.0)
+          (err 0)
+          (i (/ 1.0 hz))
+          (f (lambda ()
+              (spawn (lambda ()
+                        (set! scheduler (scheduler_init evtlist ft))
+                        (set! time (clock_clock))
+                        (while (> running 0)
+                          (scheduler time)
+                          (while (< (clock_clock) time) (thread_sleep 0 100000))
+                          (set! time (+ time i))
+                          void)
+                        (println "exiting scheduler")))
+              void)))
+      (f)
+      f)))
+
+(bind-alias BEATEVT [void,Rational]*)
+
+(bind-func beat_scheduler
+  (lambda (bpm:double hz:double)
+    (let ((evtlist:SchedEvt{Rational}* null)
+          (ft:[void,Rational]* null)
+          (scheduler:[i64,Rational]* null)
+          (beat:Rational 1/1)
+          (running:i64 1)
+          (offset:i64 0)
+          (time 0.0)
+          (i (Rat 1 (dtoi64 hz)))
+          (f (lambda ()
+              (spawn (lambda ()
+                        (set! scheduler (scheduler_init evtlist ft))
+                        (set! time (clock_clock))
+                        (while (> running 0)
+                          (scheduler beat)
+                          (set! beat (+ beat (* i (Rat (dtoi64 bpm) 60))))
+                          (while (< (clock_clock) time) (thread_sleep 0 100000))
+                          (set! time (+ time (rtod i)))
+                          void)
+                        (println "exiting scheduler")))
+              void)))
+      (f)
+      f)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; this is a special case to run a clock scheduler on/as the main loop
+;; i.e. to schedule xtlang code on process thread 0
+;;
+(bind-val MAIN [void]*)
+
+(bind-alias MAINEVT [void,double]*)
+
+(bind-func clock_scheduler_main_callback
+  (let ((hz:double 500.0)
+        (evtlist:SchedEvt{double}* null)
+        (ft:[void,double]* null)
+        (scheduler:[i64,double]* null)
+        (running:i64 1)
+        (time 0.0)
+        (err 0)
+        (i (/ 1.0 hz)))
+    (lambda ()      
+      (set! scheduler (scheduler_init evtlist ft))
+      (set! time (clock_clock))
+      (while (> running 0)
+        (scheduler time)
+        (while (< (clock_clock) time) (thread_sleep 0 100000))
+        (set! time (+ time i))
+        void)
+      void)))
+
+(bind-func run_main_event_loop
+  (lambda ()
+    (clock_scheduler_main_callback.hz:double 500.0)
+    (xtm_set_main_callback (get_native_fptr clock_scheduler_main_callback))
+    (set! MAIN clock_scheduler_main_callback)
+    void))
+
+;; called as either
+;;
+;; (sched_main func)      ;; call now
+;; or
+;; (sched_main time func) ;; call in future
+;;
+(bind-macro
+  ""
+  (sched_main . args)
+  (if (= (length args) 1)
+      `(scheduler_evt (,(string->symbol (string-append "MAIN" ".scheduler")))
+                      (clock_clock) (get_native_name ,(car args)) null)
+      `(scheduler_evt (,(string->symbol (string-append "MAIN" ".scheduler")))
+                      ,(car args) (get_native_name ,(cadr args)) null)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define *xtmlib-scheduler-loaded* #t)
+(impc:aot:insert-footer "xtmscheduler")

@@ -1,0 +1,81 @@
+
+;;; mtaudio.xtm -- basic multithreaded audio example
+
+;; Author: Andrew Sorensen
+;; Keywords: extempore
+
+;;; Commentary:
+
+;; Simple example running multiple instruments each in
+;; its own dedicated RT thread
+
+;;; Code:
+
+(sys:load "libs/core/math.xtm")
+(sys:load "libs/core/audio_dsp.xtm")
+(sys:load "libs/core/instruments.xtm")
+
+(bind-val fmsynth INSTRUMENT (make_instrument (fmsynth_note) (fmsynth_fx)))
+(define fmsynth ($$ fmsynth))
+(bind-val synth INSTRUMENT (make_instrument (analogue_note) (analogue_fx)))
+(define synth ($$ synth))
+(bind-val pad INSTRUMENT (make_instrument (analogue_note) (analogue_fx)))
+(define pad ($$ pad))
+
+
+;; normal dsp definiton to be run
+;; on RT audio thread #1
+(bind-func dsp1:DSP
+  (lambda (in time chan dat)
+    (fmsynth in time chan dat)))
+
+;; normal dsp definiton to be run
+;; on RT audio thread #2
+(bind-func dsp2:DSP
+  (lambda (in time chan dat)
+    (synth in time chan dat)))
+
+;; normal dsp definiton to be run
+;; on RT audio thread #3
+(bind-func dsp3:DSP
+  (lambda (in time chan dat)
+    (pad in time chan dat)))
+
+
+;; dspmt takes 3 inputs (i.e. from dsp1 dsp2 and dsp3)
+;; in is of type double*
+(bind-func dspmt:DSPMT 1000000
+  (let ((reverb (reverb_st_c)))
+    (lambda (in time chan dat)
+      (reverb chan
+              (+ (* 0.5 (pref in 0))
+                 (* 0.5 (pref in 1))
+                 (* 0.5 (pref in 2)))
+              0.5 20.0 0.2 0.4))))
+
+;; first argument is exected to be
+;; a closure of type DSPMT
+;; after that 'n' number of standard
+;; DSP closures defines the number
+;; of parallel audio threads to run.
+;; DSPMT's first argument will contain
+;; 'n' number of input samples -
+;; one per RT audio thread
+(dsp:set! dspmt dsp1 dsp2 dsp3)
+
+;; make some noise
+(define t1
+  (lambda (beat dur)
+    (play fmsynth (random 40 70) 80 (* 1.0 dur))
+    (play synth (random 60 80) 80 (* 1.0 dur))
+    (play pad (random 30 50) 80 (* 1.0 dur))
+    (callback (*metro* (+ beat (* .5 dur))) 't1 (+ beat dur) dur)))
+
+(t1 (*metro* 'get-beat 4) 1/4)
+
+(define t2
+  (lambda (beat dur)
+    (println 'Audio 'Load: (* 100. (sys:audio-load)) '%)
+    (callback (*metro* (+ beat (* .5 dur))) 't2 (+ beat dur) dur)))
+
+(t2 (*metro* 'get-beat 4) 4)
