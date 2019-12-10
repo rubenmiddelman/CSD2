@@ -1,0 +1,71 @@
+[33mcommit 5e6c1ec6bb0b62bd7737bb2e5799222faba386b7[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Mon Nov 25 15:59:39 2019 +0100
+
+    adds the first excercise for block 2 for CSD year 2 made by ruben Middelman
+
+[33mcommit 94b6e15120bba7bc284767863c4830979b74a6d8[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Tue Oct 22 13:04:58 2019 +0200
+
+    adds the final version of the beat generator
+
+[33mcommit a9406d0c37f87eef959c5b0cb779458f05fd189f[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Mon Oct 21 23:31:22 2019 +0200
+
+    adds the final version of the csd final excercises by ruben middelman also adds sounds
+
+[33mcommit ac331575bebd18d90c007414cf258139be19463f[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Mon Sep 23 06:21:04 2019 +0200
+
+    adds a polyphonic and monophinic sequencer python file that plays drumloops also adds apropriat audio files with it so there is something to play
+
+[33mcommit cbf1142446af908c9f90659cbf338b9543ee1490[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sat Sep 21 16:01:16 2019 +0200
+
+    adds a sequencer python file that plays a sequence of notes also adds a wav file to sequence
+
+[33mcommit c2511fa7b409a34aa5e249f596bdd856d47e9361[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Mon Sep 16 01:14:03 2019 +0200
+
+    adds random and a read text file function to the sample with delay program also adds a txt file to try out the read file version
+
+[33mcommit 6265c5af9255feded30bac14bb10cc337937b252[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sun Sep 15 18:57:50 2019 +0200
+
+    adds a sampley player with delay v1 where write option is only possible
+
+[33mcommit 68f82427b01b0a8c24c31ee9bc5a093ff1e12cd9[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Mon Sep 9 13:18:10 2019 +0200
+
+    Adds the sampleplayer.py which is a program that lets you choose the amount of samples that are played
+
+[33mcommit 3cc7f5120f017fc9343f0dde63d376ce6827fc9b[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sun Sep 8 15:45:01 2019 +0200
+
+    adds a program that plays a sample also adds a sample to play
+
+[33mcommit 99c7e6faf95eddc27ce695050aad2f3768e8f3e4[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sun Sep 8 15:09:23 2019 +0200
+
+    Adds a username to the hello world
+
+[33mcommit b9327aec21cbb2c7e5260b486647003dbdff28de[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sun Sep 8 15:01:57 2019 +0200
+
+    Adds a python program that reads HELLO WORLD
+
+[33mcommit d8b990b89a5aaabea090d03477f5d76fc655312b[m
+Author: Ruben Middelman <rubenmiddelman@gmail.com>
+Date:   Sun Sep 8 14:45:07 2019 +0200
+
+    First Commit adds a README file
