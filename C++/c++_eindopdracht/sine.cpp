@@ -34,8 +34,9 @@ void Sine::tick() {
     amp = 0;
   }
 }
-  float x = 1;
-//getters and setters
+void Sine::setAmp(float amp){
+  this->amp = amp;
+}
 void Sine::setFrequency(float frequency)
 {
   // TODO add check to see if parameter is valid
@@ -47,6 +48,4 @@ float Sine::getFrequency()
   return frequency;
 }
 
-void Sine::setAmp(float amp){
-  this->amp = amp;
-}
+//getters and setters

@@ -1,18 +1,9 @@
 #include <iostream>
-#include <string>
 
 using namespace std;
 
-class Guitar{
+class Guitar : public Instrument{
 public:
   Guitar();
-
-  void setInstrument(string insName);
-  void roll(int amountOfPlays);
-  void play();
-
-  string insSound;
-  string guitar = "guitar";
-  string piano = "piano";
-  string drums = "drums";
+  void tune();
 };

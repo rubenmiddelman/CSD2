@@ -3,8 +3,9 @@
 #include <iostream>
 #include <cstdlib>
 #include<time.h>
+#include "Osc.h"
 
-class Saw
+class Saw: public Osc
 {
 public:
   //Constructor and destructor
@@ -15,11 +16,12 @@ public:
   float getSample();
   // go to next sample
   float sawOut();
-
-  //getters and setters
+  void setAmp(float amp);
+  float amp;
   void setFrequency(float frequency);
   float getFrequency();
 
+  //NOTE - do we need a setter for phase? for now -> not using one
   //NOTE - do we need a setter for phase? for now -> not using one
 
 private:

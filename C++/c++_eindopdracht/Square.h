@@ -19,6 +19,7 @@ public:
   //getters and setters
   void setFrequency(float frequency);
   float getFrequency();
+  void setAmp(float frequency);
 
   //NOTE - do we need a setter for phase? for now -> not using one
 
@@ -29,6 +30,7 @@ private:
   // contains the current sample
   float sample;
   float samplerate;
+  float amp;
 };
 
 #endif

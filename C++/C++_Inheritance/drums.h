@@ -3,7 +3,7 @@
 
 using namespace std;
 
-class Drums{
+class Drums : public Instrument{
 public:
   Drums();
 };

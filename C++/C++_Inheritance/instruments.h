@@ -1,3 +1,5 @@
+#ifndef _INSTRUMNTS_H_
+#define _INSTRUMENTS_H_
 #include <iostream>
 #include <string>
 
@@ -7,12 +9,8 @@ class Instrument{
 public:
   Instrument();
 
-  void setInstrument(string insName);
   void roll(int amountOfPlays);
   void play();
 
-  string insSound;
-  string guitar = "guitar";
-  string piano = "piano";
-  string drums = "drums";
 };
+#endif

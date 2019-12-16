@@ -12,13 +12,9 @@ Saw::Saw(float frequency, float samplerate) {
   phase = 0;
   std::cout << "Sine - constructor\n";
 }
-
-
-
 Saw::~Saw() {
   std::cout << "Sine - destructor\n";
 }
-
 
 float Saw::getSample() {
   return sample;
@@ -31,7 +27,9 @@ float Saw::sawOut() {
   sample = amplitude * (phase - 1);
   return sample;
 }
-//getters and setters
+void Saw::setAmp(float amp){
+  this->amp = amp;
+}
 void Saw::setFrequency(float frequency)
 {
   // TODO add check to see if parameter is valid

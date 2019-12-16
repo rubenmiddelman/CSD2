@@ -1,8 +1,8 @@
 #ifndef _SINE_H_
 #define _SINE_H_
 #include <iostream>
-
-class Sine
+#include "Osc.h"
+class Sine:public Osc
 {
 public:
   //Constructor and destructor
@@ -13,12 +13,12 @@ public:
   float getSample();
   // go to next sample
   void tick();
-
-  //getters and setters
+  void setAmp(float amp);
+  float amp;
   void setFrequency(float frequency);
   float getFrequency();
-  void setAmp(float amp);
 
+  //NOTE - do we need a setter for phase? for now -> not using one
   //NOTE - do we need a setter for phase? for now -> not using one
 
 private:
@@ -28,7 +28,6 @@ private:
   // contains the current sample
   float sample;
   float samplerate;
-  float amp;
 };
 
 #endif
