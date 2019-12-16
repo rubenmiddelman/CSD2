@@ -6,15 +6,11 @@
 #include <vector>
 #include <list>
 #include "markov.h"
+#include <cstdlib>
+#include<time.h>
 using namespace std;
-MarkovCommand::MarkovConst(){
-	cout<<"contructor";
-}
 
-int MarkovCommand::GetNextNote(list <int> g){
-	x = g.pop_fron();
-	return x;
-}
+list <int> noteNumbers;
 
 void MarkovCommand::showlist(list <int> g)
 {
@@ -39,7 +35,7 @@ const vector<string> MarkovCommand::explode(const string& s, const char& c)
 	return v;
 }
 
-int MarkovCommand::MarkovMaker(list <int> noteNumbers;){
+list <int> MarkovCommand::MarkovMaker(list <int> lst){
 	string STRING;
 	ifstream inFile;
 	system("python3 pythonmarkov.py");
@@ -52,37 +48,73 @@ int MarkovCommand::MarkovMaker(list <int> noteNumbers;){
 	vector<string> v{explode(STRING, ' ')};
 	for(auto n:v){
 		if(n == "a"){
-			noteNumbers.push_back(60);
+			lst.push_back(262);
 		}
 		if(n == "e"){
-			noteNumbers.push_back(64);
+			lst.push_back(330);
 		}
 		if(n == "i"){
-			noteNumbers.push_back(67);
+			lst.push_back(392);
 		}
 		if(n == "o"){
-			noteNumbers.push_back(69);
+			lst.push_back(440);
 		}
 		if(n == "u"){
-			noteNumbers.push_back(71);
+			lst.push_back(494);
 		}
 		if(n == "A"){
-			noteNumbers.push_back(72);
+			lst.push_back(524);
 		}
 		if(n == "E"){
-			noteNumbers.push_back(76);
+			lst.push_back(659);
 		}
 		if(n == "I"){
-			noteNumbers.push_back(79);
+			lst.push_back(784);
 		}
 		if(n == "O"){
-			noteNumbers.push_back(81);
+			lst.push_back(880);
 		}
 		if(n == "U"){
-			noteNumbers.push_back(83);
+			lst.push_back(988);
 		}
 	}
-	showlist(noteNumbers);
 	inFile.close();
-	return 0;
+	return lst;
+}
+
+
+int MarkovCommand::GetNextNote(){
+	int x = 0;
+	return x;
+}
+float MarkovCommand::GetNoteLengt(){
+	float noteLengt;
+	float BPM = 90;
+	float quarterNoteLengt = 60/BPM;
+	srand(time(0));
+	int betweenOneAndThree = rand()%3;
+	//if random note is 0 then make it a quarter note
+	if(betweenOneAndThree == 0){
+		noteLengt = quarterNoteLengt;
+	}
+	if(betweenOneAndThree == 1){
+		noteLengt = 2 * quarterNoteLengt;
+	}
+	if(betweenOneAndThree == 2){
+		noteLengt = quarterNoteLengt/2;
+	}
+	noteLengt = noteLengt*1000000;
+	return noteLengt;
+}
+list <string> MarkovCommand::TextReader(list <string> x){
+  string Text;
+  ifstream TextFile;
+  TextFile.open("YourNewSintSong.txt");
+  getline(TextFile,Text); // Saves the line in STRING.
+  vector<string> v{explode(Text, ' ')};
+  for(auto n:v){
+    x.push_back(n);
+  }
+
+  return x;
 }

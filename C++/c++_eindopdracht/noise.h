@@ -1,13 +1,15 @@
-#ifndef _SINE_H_
-#define _SINE_H_
+#ifndef _NOISE_H_
+#define _NOISE_H_
 #include <iostream>
+#include <cstdlib>
+#include<time.h>
 
-class Sine
+class Noise
 {
 public:
   //Constructor and destructor
-  Sine(float frequency, float samplerate);
-  ~Sine();
+  Noise(float frequency, float samplerate);
+  ~Noise();
 
   //return the current sample
   float getSample();
@@ -17,7 +19,6 @@ public:
   //getters and setters
   void setFrequency(float frequency);
   float getFrequency();
-  void setAmp(float amp);
 
   //NOTE - do we need a setter for phase? for now -> not using one
 
@@ -28,7 +29,6 @@ private:
   // contains the current sample
   float sample;
   float samplerate;
-  float amp;
 };
 
 #endif
