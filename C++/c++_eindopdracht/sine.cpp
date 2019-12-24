@@ -1,7 +1,8 @@
 #include "sine.h"
 #include "math.h"
+#include "Osc.h"
 
-Sine::Sine(float frequency, float samplerate) {
+Sine::Sine(float frequency, float samplerate){
   // initialize members
   this->frequency = frequency;
   this->samplerate = samplerate;
@@ -18,11 +19,6 @@ Sine::~Sine() {
   std::cout << "Sine - destructor\n";
 }
 
-
-float Sine::getSample() {
-  return sample;
-}
-
 void Sine::tick() {
   // TODO - frequency / samplerate can be implemented in a more efficient way
   phase += frequency / samplerate;
@@ -34,18 +30,6 @@ void Sine::tick() {
     amp = 0;
   }
 }
-void Sine::setAmp(float amp){
-  this->amp = amp;
-}
-void Sine::setFrequency(float frequency)
-{
-  // TODO add check to see if parameter is valid
-  this->frequency = frequency;
-}
 
-float Sine::getFrequency()
-{
-  return frequency;
-}
 
 //getters and setters

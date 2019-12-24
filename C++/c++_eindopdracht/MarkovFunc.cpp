@@ -11,7 +11,7 @@
 using namespace std;
 
 list <int> noteNumbers;
-
+//shows the list (is more of a test function that isn't needed in the real code)
 void MarkovCommand::showlist(list <int> g)
 {
     list <int> :: iterator it;
@@ -19,7 +19,7 @@ void MarkovCommand::showlist(list <int> g)
         cout << '\t' << *it;
     cout << '\n';
 }
-
+//seperates the strings from a list
 const vector<string> MarkovCommand::explode(const string& s, const char& c)
 {
 	string buff{""};
@@ -34,7 +34,7 @@ const vector<string> MarkovCommand::explode(const string& s, const char& c)
 
 	return v;
 }
-
+//takes all the vowels python poops out and returns them as numbers in a list
 list <int> MarkovCommand::MarkovMaker(list <int> lst){
 	string STRING;
 	ifstream inFile;
@@ -82,11 +82,12 @@ list <int> MarkovCommand::MarkovMaker(list <int> lst){
 	return lst;
 }
 
-
+//function doesn't do anything but w'll leave it here for later
 int MarkovCommand::GetNextNote(){
 	int x = 0;
 	return x;
 }
+//makes a new notelenght
 float MarkovCommand::GetNoteLengt(){
 	float noteLengt;
 	float BPM = 90;
@@ -106,6 +107,7 @@ float MarkovCommand::GetNoteLengt(){
 	noteLengt = noteLengt*1000000;
 	return noteLengt;
 }
+//splits the text file and puts all those words in a list so that can be read out
 list <string> MarkovCommand::TextReader(list <string> x){
   string Text;
   ifstream TextFile;

@@ -3,34 +3,16 @@
 #include <iostream>
 #include <cstdlib>
 #include<time.h>
+#include "Osc.h"
 
-class Noise
+class Noise : public Osc
 {
 public:
   //Constructor and destructor
   Noise(float frequency, float samplerate);
   ~Noise();
-
-  //return the current sample
-  float getSample();
-  // go to next sample
+  //gets the next tick
   void tick();
-
-  //getters and setters
-  void setFrequency(float frequency);
-  float getFrequency();
-  void setAmp(float amp);
-
-  //NOTE - do we need a setter for phase? for now -> not using one
-
-private:
-  float amplitude;
-  float frequency;
-  float phase;
-  // contains the current sample
-  float sample;
-  float samplerate;
-  float amp;
 };
 
 #endif

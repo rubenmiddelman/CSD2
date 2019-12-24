@@ -3,6 +3,8 @@
 #include<time.h>
 #include "Saw.h"
 
+
+//constructor and destructor
 Saw::Saw(float frequency, float samplerate) {
   // initialize members
   this->frequency = frequency;
@@ -10,15 +12,12 @@ Saw::Saw(float frequency, float samplerate) {
   amplitude = 5.0;
   sample = 0;
   phase = 0;
-  std::cout << "Sine - constructor\n";
+  std::cout << "Saw - constructor\n";
 }
 Saw::~Saw() {
-  std::cout << "Sine - destructor\n";
+  std::cout << "Saw - destructor\n";
 }
-
-float Saw::getSample() {
-  return sample;
-}
+//calculates and returns the sample
 float Saw::sawOut() {
   phase += frequency / samplerate;
   if(phase >= 2) {
@@ -26,17 +25,4 @@ float Saw::sawOut() {
   }
   sample = amplitude * (phase - 1);
   return sample;
-}
-void Saw::setAmp(float amp){
-  this->amp = amp;
-}
-void Saw::setFrequency(float frequency)
-{
-  // TODO add check to see if parameter is valid
-  this->frequency = frequency;
-}
-
-float Saw::getFrequency()
-{
-  return frequency;
 }

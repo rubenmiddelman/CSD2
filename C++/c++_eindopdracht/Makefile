@@ -2,9 +2,9 @@ CC = g++
 CFLAGS = -I/usr/local/include -Wall -std=c++1z
 LDFLAGS= -ljack
 
-all: example
+all: Final
 
-example : jack_module.o sine.o main.o MarkovFunc.o noise.o saw.o Square.o Osc.o
+Final : jack_module.o sine.o main.o MarkovFunc.o noise.o saw.o Square.o Osc.o
 	$(CC) -o $@ $(CFLAGS) jack_module.o sine.o main.o MarkovFunc.o noise.o saw.o Square.o Osc.o $(LDFLAGS)
 
 .cpp.o:
@@ -12,4 +12,4 @@ example : jack_module.o sine.o main.o MarkovFunc.o noise.o saw.o Square.o Osc.o
 
 clean:
 	rm -f *.o
-	rm -f example
+	rm -f Final

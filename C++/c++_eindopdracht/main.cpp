@@ -25,7 +25,7 @@ using namespace std;
 
 int main(int argc,char **argv)
 {
-  // create a JackModule instance
+  // create an instance for everything needed
   JackModule jack;
   list <int> noteNumbers;
   list <string> textList;
@@ -36,49 +36,81 @@ int main(int argc,char **argv)
   int sizeOfTextList;
   clock_t currentTime = clock();
   int secondHi = 60/90+10000;
-  int secondkick = 60/90+10000;
   // init the jack, use program name as JACK client name
   jack.init(argv[0]);
   double samplerate = jack.getSamplerate();
+  //creates all the sine waves and other wave formes
     Sine sine(440, samplerate);
     Sine wine(440, samplerate);
     Sine dine(100, samplerate);
     Sine kine(100, samplerate);
+    Sine sine1(440, samplerate);
+    Sine sine2(440, samplerate);
+    Sine sine3(440, samplerate);
+    Sine sine4(440, samplerate);
+    Sine sine5(440, samplerate);
     Saw saw(440, samplerate);
-    Square noise(440, samplerate);
+    Noise noise(440, samplerate);
+    Square square(440, samplerate);
+  //opens the textfile to read the lyrics
   textList= lst.TextReader(textList);
 
   //assign a function to the JackModule::onProces
-  jack.onProcess = [&saw, &sine, &dine, &noise, &wine, &kine](jack_default_audio_sample_t *inBuf,
+  jack.onProcess = [&](jack_default_audio_sample_t *inBuf,
      jack_default_audio_sample_t *outBuf, jack_nframes_t nframes) {
 
     for(unsigned int i = 0; i < nframes; i++) {
-      outBuf[i] =saw.getSample() *sine.getSample() + noise.getSample()+dine.getSample()+kine.getSample()+wine.getSample();
+      outBuf[i] =saw.getSample() *sine.getSample() + noise.getSample()+dine.getSample()+kine.getSample()+wine.getSample()+square.getSample()+sine1.getSample()+sine2.getSample()+sine3.getSample()+sine4.getSample()+sine5.getSample();
       saw.sawOut();
       sine.tick();
       dine.tick();
       noise.tick();
       wine.tick();
       kine.tick();
+      square.tick();
+      sine1.tick();
+      sine2.tick();
+      sine3.tick();
+      sine4.tick();
+      sine5.tick();
+
     }
     return 0;
   };
+  //initializes the needed list for the note noteNumbers
+  //also initializes the needed times and starts the clock
   noteNumbers = lst.MarkovMaker(noteNumbers);
   sizeOfTextList= textList.size();
   firstNoteLengt = lst.GetNoteLengt();
   clock_t secondNote = currentTime + firstNoteLengt;
   secondHi =currentTime+secondHi;
-  secondkick =currentTime+secondkick;
-
+  //just need to connect jackd and everything is up and running
   jack.autoConnect();
+  //starts the loop for the note getting part
   while(loop == 0){
     currentTime = clock();
     if(currentTime >= secondHi){
+      //plays the "kick" and hihat
       noise.setAmp(1);
       secondHi = 60/90+1000000;
       secondHi =currentTime+secondHi;
+      square.setFrequency(noteNumbers.front()/2);
+      square.setAmp(0.5);
+      if(rand()%100>50){\
+        sine1.setFrequency(noteNumbers.front());
+        sine2.setFrequency(noteNumbers.front()*1.64);
+        sine3.setFrequency(noteNumbers.front()*2.12);
+        sine4.setFrequency(noteNumbers.front()*3.04);
+        sine5.setFrequency(noteNumbers.front()*4.89);
+        sine1.setAmp(1.0);
+        sine2.setAmp(1.0);
+        sine3.setAmp(0.8);
+        sine4.setAmp(0.8);
+        sine5.setAmp(0.5);
+      }
     }
     if(currentTime >= secondNote){
+      //makes sure everyone gets their notes ands resets
       secondNote = currentTime + lst.GetNoteLengt();
       saw.setFrequency(noteNumbers.front());
       sine.setFrequency(noteNumbers.front());
