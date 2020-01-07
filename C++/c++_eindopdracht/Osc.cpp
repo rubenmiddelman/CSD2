@@ -11,17 +11,17 @@ Osc::~Osc(){
 void Osc::setAmp(float amp){
   this->amp = amp;
 }
+//sets the freq for the oscillator
 void Osc::setFrequency(float frequency)
 {
-  // TODO add check to see if parameter is valid
   this->frequency = frequency;
 }
-
+//gets the frequency
 float Osc::getFrequency()
 {
   return frequency;
 }
-
+//gets the sample
 float Osc::getSample() {
   return sample;
 }

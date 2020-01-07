@@ -4,7 +4,7 @@ import os
 letterList = []
 vowelCounter = 0
 listOfVowels = []
-
+#checks if text files exist if they exist opens them if they dont creates them
 if os.path.isfile('YourNewSintSong.txt'):
     os.remove("YourNewSintSong.txt")
 try:
@@ -19,11 +19,12 @@ try:
 except IOError:
     numOfVowelsTXT = open('numOfVowels.txt', "x+")
 
-# Trump's speeches here: https://github.com/ryanmcdermott/trump-speeches
+
+
 sintLyrics = open('SinterklaasLiedjes.txt', encoding='utf8').read()
 
 corpus = sintLyrics.split()
-
+#makes some pairs
 def make_pairs(corpus):
     for i in range(len(corpus)-1):
         yield (corpus[i], corpus[i+1])

@@ -14,9 +14,6 @@ public:
   // go to next sample
   void tick();
 
-  //getters and setters
-  //NOTE - do we need a setter for phase? for now -> not using one
-
 };
 
 #endif

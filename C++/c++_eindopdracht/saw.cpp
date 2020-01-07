@@ -4,9 +4,8 @@
 #include "Saw.h"
 
 
-//constructor and destructor
+//constructor
 Saw::Saw(float frequency, float samplerate) {
-  // initialize members
   this->frequency = frequency;
   this->samplerate = samplerate;
   amplitude = 5.0;
@@ -14,9 +13,12 @@ Saw::Saw(float frequency, float samplerate) {
   phase = 0;
   std::cout << "Saw - constructor\n";
 }
+//destructor
 Saw::~Saw() {
   std::cout << "Saw - destructor\n";
 }
+
+
 //calculates and returns the sample
 float Saw::sawOut() {
   phase += frequency / samplerate;

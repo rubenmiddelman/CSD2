@@ -11,8 +11,6 @@ public:
   //Constructor and destructor
   Saw(float frequency, float samplerate);
   ~Saw();
-
-  // go to next sample
   float sawOut();
 };
 

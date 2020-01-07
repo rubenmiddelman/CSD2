@@ -13,14 +13,12 @@ public:
   void setFrequency(float frequency);
   float getFrequency();
   float getSample();
-  //NOTE - do we need a setter for phase? for now -> not using one
-
+//all the variables w'll need for the oscs
 protected:
   float amplitude;
   float amp;
   float frequency;
   float phase;
-  // contains the current sample
   float sample;
   float samplerate;
 };

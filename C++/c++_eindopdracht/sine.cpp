@@ -1,9 +1,8 @@
 #include "sine.h"
 #include "math.h"
 #include "Osc.h"
-
+//constructor and destructor
 Sine::Sine(float frequency, float samplerate){
-  // initialize members
   this->frequency = frequency;
   this->samplerate = samplerate;
   amplitude = 5.0;
@@ -12,15 +11,11 @@ Sine::Sine(float frequency, float samplerate){
   amp = 1;
   std::cout << "Sine - constructor\n";
 }
-
-
-
 Sine::~Sine() {
   std::cout << "Sine - destructor\n";
 }
-
+//gets the next tick
 void Sine::tick() {
-  // TODO - frequency / samplerate can be implemented in a more efficient way
   phase += frequency / samplerate;
   sample = amp * sin(M_PI * 2 * phase);
   if(amp > 0){
@@ -30,6 +25,3 @@ void Sine::tick() {
     amp = 0;
   }
 }
-
-
-//getters and setters

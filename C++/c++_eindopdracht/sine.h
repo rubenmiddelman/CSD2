@@ -11,11 +11,6 @@ public:
 
   // go to next sample
   void tick();
-
-  //NOTE - do we need a setter for phase? for now -> not using one
-  //NOTE - do we need a setter for phase? for now -> not using one
-
 };
 
 #endif
-  float getSample();

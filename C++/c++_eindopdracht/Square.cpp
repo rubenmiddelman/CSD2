@@ -3,7 +3,6 @@
 #include "Osc.h"
 //constructor and destructor
 Square::Square(float frequency, float samplerate) {
-  // initialize members
   this->frequency = frequency;
   this->samplerate = samplerate;
   amplitude = 5.0;
@@ -12,7 +11,6 @@ Square::Square(float frequency, float samplerate) {
   amp = 1;
   std::cout << "Square - constructor\n";
 }
-
 Square::~Square() {
   std::cout << "Square - destructor\n";
 }
