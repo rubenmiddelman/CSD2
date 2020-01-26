@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include "Square.h"
 #include "Osc.h"
+#include "Synth.h"
 using namespace std;
 
 #define PI_2 6.28318530717959
@@ -40,27 +41,22 @@ int main(int argc,char **argv)
   jack.init(argv[0]);
   double samplerate = jack.getSamplerate();
   //creates all the sine waves and other wave formes
+    Synth addSynth(samplerate);
     Sine sine(440, samplerate);
     Sine wine(440, samplerate);
     Sine dine(100, samplerate);
     Sine kine(100, samplerate);
-    Sine sine1(440, samplerate);
-    Sine sine2(440, samplerate);
-    Sine sine3(440, samplerate);
-    Sine sine4(440, samplerate);
-    Sine sine5(440, samplerate);
     Saw saw(440, samplerate);
     Noise noise(440, samplerate);
     Square square(440, samplerate);
   //opens the textfile to read the lyrics
   textList= lst.TextReader(textList);
-
   //assign a function to the JackModule::onProces
   jack.onProcess = [&](jack_default_audio_sample_t *inBuf,
      jack_default_audio_sample_t *outBuf, jack_nframes_t nframes) {
 
     for(unsigned int i = 0; i < nframes; i++) {
-      outBuf[i] =saw.getSample() *sine.getSample() + noise.getSample()+dine.getSample()+kine.getSample()+wine.getSample()+square.getSample()+sine1.getSample()+sine2.getSample()+sine3.getSample()+sine4.getSample()+sine5.getSample();
+      outBuf[i] =saw.getSample() *sine.getSample() + noise.getSample()+dine.getSample()+kine.getSample()+wine.getSample()+square.getSample()* addSynth.SynthOut();
       saw.sawOut();
       sine.tick();
       dine.tick();
@@ -68,12 +64,7 @@ int main(int argc,char **argv)
       wine.tick();
       kine.tick();
       square.tick();
-      sine1.tick();
-      sine2.tick();
-      sine3.tick();
-      sine4.tick();
-      sine5.tick();
-
+      addSynth.SynthTick();
     }
     return 0;
   };
@@ -96,18 +87,10 @@ int main(int argc,char **argv)
       secondHi =currentTime+secondHi;
       square.setFrequency(noteNumbers.front()/2);
       square.setAmp(0.5);
-      if(rand()%100>50){\
-        sine1.setFrequency(noteNumbers.front());
-        sine2.setFrequency(noteNumbers.front()*1.64);
-        sine3.setFrequency(noteNumbers.front()*2.12);
-        sine4.setFrequency(noteNumbers.front()*3.04);
-        sine5.setFrequency(noteNumbers.front()*4.89);
-        sine1.setAmp(1.0);
-        sine2.setAmp(1.0);
-        sine3.setAmp(0.8);
-        sine4.setAmp(0.8);
-        sine5.setAmp(0.5);
+      if(rand()%100>50){
       }
+      addSynth.SynthSetFreq(noteNumbers.front());
+      addSynth.SynthSetAmp();
     }
     if(currentTime >= secondNote){
       //makes sure everyone gets their notes ands resets
