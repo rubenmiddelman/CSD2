@@ -14,6 +14,6 @@ public:
 
 
   float samplerate;
-  float output= 0;
+  float output = 0;
 };
 #endif
